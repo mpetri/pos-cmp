@@ -1,0 +1,172 @@
+#pragma once
+
+#include "list_types.hpp"
+#include "rank_functions.hpp"
+#include "range_iterators.hpp"
+
+#pragma pack(1)
+struct list_metadata {
+    uint64_t id_offset;
+    uint64_t freq_offset;
+};
+
+#pragma pack(1)
+struct wand_metadata {
+    double list_max_score;
+    double max_doc_weight;
+};
+
+template<class t_pl_ids=optpfor_list<128,true>,
+         class t_pl_freqs=optpfor_list<128,false>,
+         class t_rank=rank_bm25<>>
+class index_invidx
+{
+    public:
+        using size_type = sdsl::int_vector<>::size_type;
+        typedef t_pl_ids id_list_type;
+        typedef t_pl_freqs freq_list_type;
+        using rank_type = t_rank;
+        const std::string name = "INVIDX";
+        std::string file_name;
+    private:
+        size_t m_num_lists;
+        std::vector<list_metadata> m_meta_data;
+        std::vector<wand_metadata> m_wand_data;
+        sdsl::bit_vector m_data;
+        rank_type m_ranker;
+        doc_perm m_dp;
+    private:
+        template<class t_itr,class t_fitr>
+        wand_metadata create_wand_data(t_itr ibegin,t_itr iend,t_fitr fbegin,t_fitr fend)
+        {
+            wand_metadata wm {0.0,0.0};
+            auto F_t = std::accumulate(fbegin,fend,0);
+            auto f_t = std::distance(ibegin,iend);
+            auto tmp = ibegin;
+            while (tmp != iend) {
+                auto id = *tmp;
+                auto f_dt = *fbegin;
+                double W_d = m_ranker.doc_length(id);
+                double doc_weight = m_ranker.calc_doc_weight(W_d);
+                double score = m_ranker.calculate_docscore(1.0f,f_dt,f_t,F_t,W_d,true);
+                wm.list_max_score = std::max(wm.list_max_score,score);
+                wm.max_doc_weight = std::max(wm.max_doc_weight,doc_weight);
+                ++tmp;
+                ++fbegin;
+            }
+            return wm;
+        }
+    public:
+        index_invidx(collection& col)
+        {
+            file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this);
+            if (utils::file_exists(file_name)) {  // load
+                std::cout << "LOAD from file '" << file_name << "'" << std::endl;
+                std::ifstream ifs(file_name);
+                load(ifs);
+            } else { // construct
+                // (1) ranker loads doc lengths
+                m_ranker = t_rank(col);
+                // (2) doc permutation
+                sdsl::load_from_file(m_dp,col.file_map[KEY_DOCPERM]);
+                // (3) postings lists
+                {
+                    sdsl::int_vector_mapper<> D(col.file_map[KEY_D]);
+                    sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
+                    bit_ostream bvo(m_data);
+                    m_num_lists = C.size();
+                    m_meta_data.resize(m_num_lists);
+                    m_wand_data.resize(m_num_lists);
+                    size_t csum = C[0] + C[1];
+                    for (size_t i=2; i<C.size(); i++) {
+                        size_t n = C[i];
+                        std::vector<uint32_t> tmp(D.begin()+csum,D.begin()+csum+ n);
+                        std::sort(tmp.begin(),tmp.end());
+
+                        using itr_type = std::vector<uint32_t>::const_iterator;
+                        id_range_adaptor<itr_type> id_range(tmp.begin(),tmp.end());
+                        freq_range_adaptor<itr_type> freq_range(tmp.begin(),tmp.end());
+
+                        auto tmp2 = tmp;
+                        auto last = std::unique(tmp2.begin(),tmp2.end());
+                        auto un = std::distance(tmp2.begin(),last);
+
+                        std::cout << "i=" << i << " n=" << n << " un=" << un;
+                        size_t id_cnt = 0;
+                        auto itmp = id_range.begin();
+                        auto iend = id_range.end();
+                        while (itmp != iend) {
+                            id_cnt++;
+                            ++itmp;
+                        }
+                        size_t f_cnt = 0;
+                        auto ftmp = freq_range.begin();
+                        auto fend = freq_range.end();
+                        while (ftmp != fend) {
+                            f_cnt++;
+                            ++ftmp;
+                        }
+                        std::cout << " icnt=" << id_cnt << " fcnt=" << f_cnt << std::endl;
+
+
+                        // (a) ids
+
+                        m_meta_data[i].id_offset = id_list_type::create(bvo,id_range.begin(),id_range.end());
+                        // (b) freqs
+
+                        m_meta_data[i].freq_offset = freq_list_type::create(bvo,freq_range.begin(),freq_range.end());
+
+                        // (c) wand data
+                        m_wand_data[i] = create_wand_data(id_range.begin(),id_range.end(),freq_range.begin(),freq_range.end());
+
+                        csum += n;
+                    }
+                }
+                std::cout << "STORE to file '" << file_name << "'" << std::endl;
+                std::ofstream ofs(file_name);
+                serialize(ofs);
+            }
+        }
+        size_type serialize(std::ostream& out, sdsl::structure_tree_node* v=NULL, std::string name="") const
+        {
+            sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+            size_type written_bytes = 0;
+            written_bytes += sdsl::write_member(m_num_lists,out,child,"num plists");
+            written_bytes += m_ranker.serialize(out,child,"ranker");
+            written_bytes += m_dp.serialize(out,child,"doc_perm");
+
+            auto* wanddata = sdsl::structure_tree::add_child(child, "wand metadata","wand metadata");
+            out.write((const char*)m_wand_data.data(), m_wand_data.size()*sizeof(wand_metadata));
+            written_bytes += m_wand_data.size()*sizeof(wand_metadata);
+            sdsl::structure_tree::add_size(wanddata, m_wand_data.size()*sizeof(wand_metadata));
+
+            auto* listdata = sdsl::structure_tree::add_child(child, "list metadata","list metadata");
+            out.write((const char*)m_meta_data.data(), m_meta_data.size()*sizeof(list_metadata));
+            written_bytes += m_meta_data.size()*sizeof(list_metadata);
+            sdsl::structure_tree::add_size(listdata, m_meta_data.size()*sizeof(list_metadata));
+
+            written_bytes += m_data.serialize(out,child,"list data");
+
+            sdsl::structure_tree::add_size(child, written_bytes);
+            return written_bytes;
+        }
+        void load(std::ifstream& ifs)
+        {
+            sdsl::read_member(m_num_lists,ifs);
+            m_ranker.load(ifs);
+            m_dp.load(ifs);
+            m_wand_data.resize(m_num_lists);
+            ifs.read((char*)m_wand_data.data(),m_num_lists*sizeof(wand_metadata));
+            m_meta_data.resize(m_num_lists);
+            ifs.read((char*)m_meta_data.data(),m_num_lists*sizeof(list_metadata));
+            m_data.load(ifs);
+        }
+        std::pair<typename id_list_type::iterator_pair,typename freq_list_type::iterator_pair>
+        list(size_t i) const
+        {
+            bit_istream is(m_data);
+            return make_pair(id_list_type::iterators(is,m_meta_data[i].id_offset),
+                             freq_list_type::iterators(is,m_meta_data[i].freq_offset)
+                            );
+        }
+};
