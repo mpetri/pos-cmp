@@ -157,10 +157,11 @@ struct vbyte {
         return 8*vbyte_len[sdsl::bits::hi(x)+1];
     }
     template<typename T>
-    static void encode_check_size(bit_ostream& os,T x)
+    static void encode_check_size(bit_ostream& os,T y)
     {
         static_assert(std::numeric_limits<T>::is_signed == false,"can only encode unsigned integers");
-        os.expand_if_needed(encoded_length(x));
+        os.expand_if_needed(encoded_length(y));
+        uint64_t x = y;
         uint8_t w = x & 0x7F;
         x >>= 7;
         while (x > 0) {
@@ -172,9 +173,10 @@ struct vbyte {
         os.put_int_no_size_check(w,8);
     }
     template<typename T>
-    static void encode(bit_ostream& os,T x)
+    static void encode(bit_ostream& os,T y)
     {
         static_assert(std::numeric_limits<T>::is_signed == false,"can only encode unsigned integers");
+        uint64_t x = y;
         uint8_t w = x & 0x7F;
         x >>= 7;
         while (x > 0) {
