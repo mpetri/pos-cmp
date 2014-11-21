@@ -39,23 +39,9 @@ parse_args(int argc,char* const argv[])
     return args;
 }
 
-
-int main(int argc, char* const argv[])
+template<class t_idx>
+int verify_index(t_idx& index,collection& col)
 {
-    // using clock = std::chrono::high_resolution_clock;
-
-    /* parse command line */
-    cmdargs_t args = parse_args(argc,argv);
-
-    /* parse the collection */
-    collection col(args.collection_dir);
-
-    /* create index */
-    using invidx_type = index_invidx<>;
-    index_abspos<eliasfano_list<true>,invidx_type> index(col);
-    std::ofstream vofs(index.file_name+".html");
-    sdsl::write_structure<sdsl::HTML_FORMAT>(index,vofs);
-
     /* verify inverted index */
     {
         sdsl::int_vector_mapper<> D(col.file_map[KEY_D]);
@@ -147,6 +133,35 @@ int main(int argc, char* const argv[])
         }
         std::cout << "ABSPOSIDX - OK." << std::endl;
     }
+    return 0;
+}
 
+
+
+int main(int argc, char* const argv[])
+{
+    // using clock = std::chrono::high_resolution_clock;
+
+    /* parse command line */
+    cmdargs_t args = parse_args(argc,argv);
+
+    /* parse the collection */
+    collection col(args.collection_dir);
+
+    /* create index */
+    {
+        using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
+        index_abspos<optpfor_list<128,true>,invidx_type> index(col);
+        std::ofstream vofs(index.file_name+".html");
+        sdsl::write_structure<sdsl::HTML_FORMAT>(index,vofs);
+        verify_index(index,col);
+    }
+    {
+        using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
+        index_abspos<eliasfano_list<true>,invidx_type> index(col);
+        std::ofstream vofs(index.file_name+".html");
+        sdsl::write_structure<sdsl::HTML_FORMAT>(index,vofs);
+        verify_index(index,col);
+    }
     return 0;
 }

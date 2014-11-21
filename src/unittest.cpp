@@ -361,7 +361,8 @@ TEST(bit_stream, delta)
     }
 }
 
-TEST(bit_stream, delta_vbyte)
+
+TEST(bit_stream, delta_gamma)
 {
     size_t n = 20;
     std::mt19937 gen(4711);
@@ -390,7 +391,7 @@ TEST(bit_stream, delta_vbyte)
     }
 }
 
-TEST(bit_stream, delta_gamma)
+TEST(bit_stream, delta_vbyte)
 {
     size_t n = 20;
     std::mt19937 gen(4711);

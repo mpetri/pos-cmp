@@ -26,7 +26,7 @@ class index_abspos
     public:
         index_abspos(collection& col) : m_docidx(col)
         {
-            file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this);
+            file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this)+".idx";
             if (utils::file_exists(file_name)) {  // load
                 std::cout << "LOAD from file '" << file_name << "'" << std::endl;
                 std::ifstream ifs(file_name);

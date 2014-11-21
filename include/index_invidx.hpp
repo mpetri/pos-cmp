@@ -32,7 +32,8 @@ class index_invidx
         size_t m_num_lists;
         std::vector<list_metadata> m_meta_data;
         std::vector<wand_metadata> m_wand_data;
-        sdsl::bit_vector m_data;
+        sdsl::bit_vector m_id_data;
+        sdsl::bit_vector m_freq_data;
         rank_type m_ranker;
         doc_perm m_dp;
     private:
@@ -59,7 +60,7 @@ class index_invidx
     public:
         index_invidx(collection& col)
         {
-            file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this);
+            file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this)+".idx";
             if (utils::file_exists(file_name)) {  // load
                 std::cout << "LOAD from file '" << file_name << "'" << std::endl;
                 std::ifstream ifs(file_name);
@@ -73,7 +74,8 @@ class index_invidx
                 {
                     sdsl::int_vector_mapper<> D(col.file_map[KEY_D]);
                     sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
-                    bit_ostream bvo(m_data);
+                    bit_ostream bvi(m_id_data);
+                    bit_ostream bvf(m_freq_data);
                     m_num_lists = C.size();
                     m_meta_data.resize(m_num_lists);
                     m_wand_data.resize(m_num_lists);
@@ -87,34 +89,10 @@ class index_invidx
                         id_range_adaptor<itr_type> id_range(tmp.begin(),tmp.end());
                         freq_range_adaptor<itr_type> freq_range(tmp.begin(),tmp.end());
 
-                        auto tmp2 = tmp;
-                        auto last = std::unique(tmp2.begin(),tmp2.end());
-                        auto un = std::distance(tmp2.begin(),last);
-
-                        std::cout << "i=" << i << " n=" << n << " un=" << un;
-                        size_t id_cnt = 0;
-                        auto itmp = id_range.begin();
-                        auto iend = id_range.end();
-                        while (itmp != iend) {
-                            id_cnt++;
-                            ++itmp;
-                        }
-                        size_t f_cnt = 0;
-                        auto ftmp = freq_range.begin();
-                        auto fend = freq_range.end();
-                        while (ftmp != fend) {
-                            f_cnt++;
-                            ++ftmp;
-                        }
-                        std::cout << " icnt=" << id_cnt << " fcnt=" << f_cnt << std::endl;
-
-
                         // (a) ids
-
-                        m_meta_data[i].id_offset = id_list_type::create(bvo,id_range.begin(),id_range.end());
+                        m_meta_data[i].id_offset = id_list_type::create(bvi,id_range.begin(),id_range.end());
                         // (b) freqs
-
-                        m_meta_data[i].freq_offset = freq_list_type::create(bvo,freq_range.begin(),freq_range.end());
+                        m_meta_data[i].freq_offset = freq_list_type::create(bvf,freq_range.begin(),freq_range.end());
 
                         // (c) wand data
                         m_wand_data[i] = create_wand_data(id_range.begin(),id_range.end(),freq_range.begin(),freq_range.end());
@@ -145,7 +123,8 @@ class index_invidx
             written_bytes += m_meta_data.size()*sizeof(list_metadata);
             sdsl::structure_tree::add_size(listdata, m_meta_data.size()*sizeof(list_metadata));
 
-            written_bytes += m_data.serialize(out,child,"list data");
+            written_bytes += m_id_data.serialize(out,child,"id data");
+            written_bytes += m_freq_data.serialize(out,child,"freq data");
 
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
@@ -159,14 +138,16 @@ class index_invidx
             ifs.read((char*)m_wand_data.data(),m_num_lists*sizeof(wand_metadata));
             m_meta_data.resize(m_num_lists);
             ifs.read((char*)m_meta_data.data(),m_num_lists*sizeof(list_metadata));
-            m_data.load(ifs);
+            m_id_data.load(ifs);
+            m_freq_data.load(ifs);
         }
         std::pair<typename id_list_type::iterator_pair,typename freq_list_type::iterator_pair>
         list(size_t i) const
         {
-            bit_istream is(m_data);
-            return make_pair(id_list_type::iterators(is,m_meta_data[i].id_offset),
-                             freq_list_type::iterators(is,m_meta_data[i].freq_offset)
+            bit_istream isi(m_id_data);
+            bit_istream isf(m_freq_data);
+            return make_pair(id_list_type::iterators(isi,m_meta_data[i].id_offset),
+                             freq_list_type::iterators(isf,m_meta_data[i].freq_offset)
                             );
         }
 };

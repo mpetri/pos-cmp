@@ -132,6 +132,7 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
         }
         bool skip(uint64_t pos)
         {
+            static_assert(t_sorted == true,"skipping only works in sorted lists.");
             if (m_cur_elem == pos) return true;
             if (m_universe <= pos) {
                 m_cur_offset = m_size;
@@ -243,7 +244,7 @@ struct eliasfano_list {
         }
 
         // write high
-        os.expand_if_needed(2*m+2);
+        os.expand_if_needed(3*m); // ~m overestimate
         itr = begin;
         size_type last_high=0;
         last = 0;

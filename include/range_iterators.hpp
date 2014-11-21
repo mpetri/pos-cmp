@@ -18,6 +18,16 @@ struct id_range_adaptor_itr : public std::iterator<std::random_access_iterator_t
         }
         return *this;
     }
+    id_range_adaptor_itr& operator--()
+    {
+        m_itr--;
+        auto cur = *m_itr;
+        while (*m_itr == cur) {
+            m_itr--;
+        }
+        m_itr++;
+        return *this;
+    }
     uint64_t operator*() const
     {
         return *m_itr;
@@ -37,14 +47,26 @@ struct id_range_adaptor_itr : public std::iterator<std::random_access_iterator_t
         }
         return *this;
     }
+    id_range_adaptor_itr& operator-=(size_type i)
+    {
+        for (size_t j=0; j<i; j++) {
+            --(*this);
+        }
+        return *this;
+    }
     id_range_adaptor_itr operator+(size_type i)
     {
         id_range_adaptor_itr tmp(*this);
         tmp += i;
         return tmp;
     }
-    template<class T>
-    auto operator-(const T& b) const -> difference_type
+    id_range_adaptor_itr operator-(size_type i)
+    {
+        id_range_adaptor_itr tmp(*this);
+        tmp -= i;
+        return tmp;
+    }
+    auto operator-(const id_range_adaptor_itr& b) const -> difference_type
     {
         difference_type dist = 0;
         if (m_itr < b.m_itr) {
@@ -113,6 +135,16 @@ struct freq_range_adaptor_itr : public std::iterator<std::random_access_iterator
         }
         return *this;
     }
+    freq_range_adaptor_itr& operator--()
+    {
+        m_itr--;
+        auto cur = *m_itr;
+        while (*m_itr == cur) {
+            m_itr--;
+        }
+        m_itr++;
+        return *this;
+    }
     uint64_t operator*() const
     {
         return cur_freq;
@@ -132,14 +164,26 @@ struct freq_range_adaptor_itr : public std::iterator<std::random_access_iterator
         }
         return *this;
     }
+    freq_range_adaptor_itr& operator-=(size_type i)
+    {
+        for (size_t j=0; j<i; j++) {
+            --(*this);
+        }
+        return *this;
+    }
     freq_range_adaptor_itr operator+(size_type i)
     {
         freq_range_adaptor_itr tmp(*this);
         tmp += i;
         return tmp;
     }
-    template<class T>
-    auto operator-(const T& b) const -> difference_type
+    freq_range_adaptor_itr operator-(size_type i)
+    {
+        freq_range_adaptor_itr tmp(*this);
+        tmp -= i;
+        return tmp;
+    }
+    auto operator-(const freq_range_adaptor_itr& b) const -> difference_type
     {
         difference_type dist = 0;
         if (m_itr < b.m_itr) {

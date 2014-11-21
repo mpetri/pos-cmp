@@ -19,6 +19,7 @@ class optpfor_iterator : public std::iterator<std::random_access_iterator_tag,ui
         using comp_codec = FastPForLib::OPTPFor<t_block_size/32,FastPForLib::Simple16<false>>;
     private:
         uint64_t m_size;
+        uint64_t m_min_offset = 0;
         mutable uint32_t m_tmp_data[t_block_size];
         const uint32_t* m_block_start;
         const uint32_t* m_block_max;
@@ -36,6 +37,10 @@ class optpfor_iterator : public std::iterator<std::random_access_iterator_tag,ui
         {
             is.seek(start_offset);
             m_size = is.decode<coder::elias_gamma>();
+            if (!t_sorted) {
+                m_min_offset = is.decode<coder::elias_gamma>();
+            }
+
             if (m_size <= t_block_size) {
                 if (!end) {
                     if (t_sorted) {
@@ -88,7 +93,7 @@ class optpfor_iterator : public std::iterator<std::random_access_iterator_tag,ui
             if (m_cur_block != m_last_accessed_block) {
                 decode_current_block();
             }
-            return m_tmp_data[m_cur_offset%t_block_size];
+            return m_tmp_data[m_cur_offset%t_block_size] + m_min_offset;
         }
         bool operator ==(const optpfor_iterator& b) const
         {
@@ -130,6 +135,7 @@ class optpfor_iterator : public std::iterator<std::random_access_iterator_tag,ui
         }
         bool skip(uint64_t pos)
         {
+            static_assert(t_sorted == true,"skipping only works in sorted lists.");
             auto in_block_offset = m_cur_offset%t_block_size;
             if (m_tmp_data[in_block_offset]==pos) return true;
             if (m_size > t_block_size && m_block_max[m_cur_block] < pos) { // more than one block?
@@ -212,12 +218,23 @@ struct optpfor_list {
         // write size
         os.encode<coder::elias_gamma>(size);
 
+        size_t min = 0;
+        if (!t_sorted) {
+            auto min_elem = std::min_element(begin,end);
+            min = *min_elem;
+            os.encode<coder::elias_gamma>(min);
+        }
+
         // one block special case
         if (size <= t_block_size) {
             if (t_sorted) {
                 os.encode<coder::delta<coder::vbyte>>(begin,end);
             } else {
-                os.encode<coder::vbyte>(begin,end);
+                auto tmp = begin;
+                while (tmp != end) {
+                    os.encode<coder::vbyte>(*tmp - min);
+                    ++tmp;
+                }
             }
         } else {
             uint64_t num_blocks = size / t_block_size;
@@ -249,6 +266,8 @@ struct optpfor_list {
                 if (t_sorted) {
                     meta_data[num_blocks+i] = tmp_data[n];
                     FastPForLib::Delta::fastDelta(tmp_data,n+1);
+                } else {
+                    for (size_t j=0; j<=n; j++) tmp_data[j] -= min;
                 }
                 size_t encoded_id_size = 0;
                 if (n == t_block_size) {
@@ -261,8 +280,6 @@ struct optpfor_list {
             }
             os.skip(block_start*32);
         }
-
-
         return data_offset;
     }
 

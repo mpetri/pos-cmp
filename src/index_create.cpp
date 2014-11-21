@@ -51,7 +51,7 @@ int main(int argc, char* const argv[])
     collection col(args.collection_dir);
 
     /* create index */
-    using invidx_type = index_invidx<>;
+    using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
     index_abspos<eliasfano_list<true>,invidx_type> index(col);
     std::ofstream vofs(index.file_name+".html");
     sdsl::write_structure<sdsl::HTML_FORMAT>(index,vofs);
