@@ -52,6 +52,7 @@ int verify_index(t_idx& index,collection& col)
         for (size_t i=2; i<C.size(); i++) {
             size_t n = C[i];
             std::vector<uint32_t> tmp(D.begin()+csum,D.begin()+csum+ n);
+            LOG_EVERY_N(C.size()/10, INFO) << "Verify invidx list " << 100*i/C.size() << "% (" << n << ")";
             std::sort(tmp.begin(),tmp.end());
 
             auto itrs = index.m_docidx.list(i);
@@ -82,16 +83,15 @@ int verify_index(t_idx& index,collection& col)
             auto itmp = id_itrs.first;
             auto iend = id_itrs.second;
             if ((size_t)un != itmp.size()) {
-                std::cerr << "ERROR IN IDS SIZE of id <" << i << ">" << std::endl;
-                return -1;
+                LOG_N_TIMES(5,ERROR) << "ERROR IN IDS SIZE of id <" << i << ">";
             }
             if ((size_t)un != ftmp.size()) {
-                std::cerr << "ERROR IN FREQ SIZE of id <" << i << ">" << std::endl;
-                return -1;
+                LOG_N_TIMES(5,ERROR) << "ERROR IN FREQ SIZE of id <" << i << ">";
+                continue;
             }
             while (itmp != iend) {
                 if (*itmp != *curid) {
-                    std::cerr << "ERROR IN IDS OF id <" << i << ">" << std::endl;
+                    LOG_N_TIMES(5,ERROR) << "ERROR IN IDS OF id <" << i << ">";
                     return -1;
                 }
                 ++curid;
@@ -99,33 +99,33 @@ int verify_index(t_idx& index,collection& col)
             }
             csum += n;
         }
-        std::cout << "INVIDX - OK." << std::endl;
+        LOG(INFO) << "INVIDX - OK.";
     }
     /* verify the position index */
     {
-        sdsl::int_vector_mapper<> SA(col.file_map[KEY_SA]);
+        sdsl::int_vector_mapper<> POSPL(col.file_map[KEY_POSPL]);
         sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
         size_t csum = C[0] + C[1];
         for (size_t i=2; i<C.size(); i++) {
             size_t n = C[i];
-            std::vector<uint32_t> tmp(SA.begin()+csum,SA.begin()+csum+ n);
-            std::sort(tmp.begin(),tmp.end());
+            LOG_EVERY_N(C.size()/10, INFO) << "Verify abspos list " << 100*i/C.size() << "% (" << n << ")";
+            auto begin = POSPL.begin()+csum;
+            auto end = POSPL.begin()+csum+n;
 
             auto itrs = index.list(i);
 
             // check ids
-            auto last = std::unique(tmp.begin(),tmp.end());
-            auto un = std::distance(tmp.begin(),last);
-            auto curid = tmp.begin();
+            auto un = std::distance(begin,end);
+            auto curid = begin;
             auto itmp = itrs.first;
             auto iend = itrs.second;
             if ((size_t)un != itmp.size()) {
-                std::cerr << "ERROR IN IDS SIZE of id <" << i << ">" << std::endl;
+                LOG(ERROR) << "ERROR IN IDS SIZE of id <" << i << ">: " << un << " - " << itmp.size();
                 return -1;
             }
             while (itmp != iend) {
                 if (*itmp != *curid) {
-                    std::cerr << "ERROR IN IDS OF id <" << i << ">" << std::endl;
+                    LOG(ERROR) << "ERROR IN IDS OF id <" << i << ">";
                     return -1;
                 }
                 ++curid;
@@ -133,7 +133,7 @@ int verify_index(t_idx& index,collection& col)
             }
             csum += n;
         }
-        std::cout << "ABSPOSIDX - OK." << std::endl;
+        LOG(INFO) << "ABSPOSIDX - OK.";
     }
     return 0;
 }
@@ -159,7 +159,7 @@ int main(int argc,const char* argv[])
         verify_index(index,col);
     }
     {
-        using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
+        using invidx_type = index_invidx<eliasfano_list<true>,optpfor_list<128,false>>;
         index_abspos<eliasfano_list<true>,invidx_type> index(col);
         verify_index(index,col);
     }
