@@ -46,6 +46,7 @@ int verify_index(t_idx& index,collection& col)
 {
     /* verify inverted index */
     {
+        LOG(INFO) << "VERIFY INVIDX";
         sdsl::int_vector_mapper<> D(col.file_map[KEY_D]);
         sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
         size_t csum = C[0] + C[1];
@@ -103,6 +104,7 @@ int verify_index(t_idx& index,collection& col)
     }
     /* verify the position index */
     {
+        LOG(INFO) << "VERIFY ABSPOS";
         sdsl::int_vector_mapper<> POSPL(col.file_map[KEY_POSPL]);
         sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
         size_t csum = C[0] + C[1];
