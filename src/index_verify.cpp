@@ -3,12 +3,17 @@
 #include "indexes.hpp"
 #include "list_types.hpp"
 
+#include "easylogging++.h"
+
+_INITIALIZE_EASYLOGGINGPP
+
+
 typedef struct cmdargs {
     std::string collection_dir;
 } cmdargs_t;
 
 void
-print_usage(char* program)
+print_usage(const char* program)
 {
     fprintf(stdout,"%s -c <collection directory> \n",program);
     fprintf(stdout,"where\n");
@@ -16,19 +21,16 @@ print_usage(char* program)
 };
 
 cmdargs_t
-parse_args(int argc,char* const argv[])
+parse_args(int argc,const char* argv[])
 {
     cmdargs_t args;
     int op;
     args.collection_dir = "";
-    while ((op=getopt(argc,argv,"c:")) != -1) {
+    while ((op=getopt(argc,(char* const*)argv,"c:")) != -1) {
         switch (op) {
             case 'c':
                 args.collection_dir = optarg;
                 break;
-            case '?':
-            default:
-                print_usage(argv[0]);
         }
     }
     if (args.collection_dir=="") {
@@ -138,9 +140,11 @@ int verify_index(t_idx& index,collection& col)
 
 
 
-int main(int argc, char* const argv[])
+int main(int argc,const char* argv[])
 {
-    // using clock = std::chrono::high_resolution_clock;
+    _START_EASYLOGGINGPP(argc,argv);
+    el::Loggers::addFlag(el::LoggingFlag::ColoredTerminalOutput);
+    el::Loggers::reconfigureAllLoggers(el::ConfigurationType::Format, "%datetime : %msg");
 
     /* parse command line */
     cmdargs_t args = parse_args(argc,argv);
@@ -151,16 +155,12 @@ int main(int argc, char* const argv[])
     /* create index */
     {
         using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
-        index_abspos<optpfor_list<128,true>,invidx_type> index(col);
-        std::ofstream vofs(index.file_name+".html");
-        sdsl::write_structure<sdsl::HTML_FORMAT>(index,vofs);
+        index_abspos<eliasfano_list<true>,invidx_type> index(col);
         verify_index(index,col);
     }
     {
         using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
         index_abspos<eliasfano_list<true>,invidx_type> index(col);
-        std::ofstream vofs(index.file_name+".html");
-        sdsl::write_structure<sdsl::HTML_FORMAT>(index,vofs);
         verify_index(index,col);
     }
     return 0;

@@ -32,6 +32,9 @@ struct rank_bm25 {
             num_terms = text.size() - num_docs;
         }
         avg_doc_len = (double)num_terms / (double)num_docs;
+
+        LOG(INFO) << "num docs : " << num_docs;
+        LOG(INFO) << "avg doc len : " << avg_doc_len;
     }
     double doc_length(size_t doc_id) const
     {
@@ -54,6 +57,9 @@ struct rank_bm25 {
         sdsl::read_member(num_docs,ifs);
         sdsl::read_member(num_terms,ifs);
         sdsl::read_member(avg_doc_len,ifs);
+        LOG(INFO) << "num docs : " << num_docs;
+        LOG(INFO) << "num terms : " << num_terms;
+        LOG(INFO) << "avg doc len : " << avg_doc_len;
         doc_lengths.load(ifs);
     }
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v=NULL, std::string name="") const

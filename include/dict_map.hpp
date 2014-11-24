@@ -17,6 +17,7 @@ struct dict_map {
     {
         auto file_name = col.path +"/"+DICTFILE;
         if (utils::file_exists(file_name)) {  // parse
+            LOG(INFO) << "CONSTRUCT dict map";
             std::ifstream dfs(file_name);
             std::string term_mapping;
             while (std::getline(dfs,term_mapping)) {
@@ -28,7 +29,8 @@ struct dict_map {
                 reverse_id_mapping[id] = term;
             }
         } else {
-            throw std::runtime_error("dictionary file '"+file_name+"' not found.");
+            LOG(FATAL) << "dictionary file '" << file_name << "' not found."
+                       throw std::runtime_error("dictionary file '"+file_name+"' not found.");
         }
     }
     query_t
@@ -46,7 +48,7 @@ struct dict_map {
             if (id_itr != id_mapping.end()) {
                 ids.push_back(id_itr->second);
             } else {
-                std::cerr << "ERROR: could not find '" << qry_token << "' in the dictionary." << std::endl;
+                LOG(ERROR) << "ERROR: could not find '" << qry_token << "' in the dictionary.";
                 return {false,qry_id,qry_content,ids};
             }
         }
@@ -60,6 +62,7 @@ parse_queries(collection& col,const std::string& qry_file)
 {
     std::vector<query_t> qrys;
     if (! utils::file_exists(qry_file)) {
+        LOG(FATAL) << "Could not read query file '" << qry_file << "'.";
         throw std::runtime_error("Could not read query file '"+qry_file+"'.");
     } else {
         auto dict = dict_map(col);

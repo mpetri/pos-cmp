@@ -3,6 +3,8 @@
 #include "list_types.hpp"
 #include "index_invidx.hpp"
 
+#include "easylogging++.h"
+
 #pragma pack(1)
 struct abs_metadata {
     uint64_t offset;
@@ -28,11 +30,13 @@ class index_abspos
         {
             file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this)+".idx";
             if (utils::file_exists(file_name)) {  // load
-                std::cout << "LOAD from file '" << file_name << "'" << std::endl;
+                LOG(INFO) << "LOAD from file '" << file_name << "'";
                 std::ifstream ifs(file_name);
                 load(ifs);
             } else { // construct
                 {
+                    // (2) pos index
+                    LOG(INFO) << "CONSTRUCT abspos index";
                     bit_ostream bvo(m_data);
                     sdsl::int_vector_mapper<> POS(col.file_map[KEY_POSPL]);
                     sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
@@ -41,15 +45,20 @@ class index_abspos
                     size_t csum = C[0] + C[1];
                     for (size_t i=2; i<C.size(); i++) {
                         size_t n = C[i];
+                        LOG_EVERY_N(C.size()/10, INFO) << "Construct abspos list " << i << " (" << n << ")";
                         auto begin = POS.begin()+csum;
                         auto end = begin + n;
                         m_meta_data[i].offset = plist_type::create(bvo,begin,end);
                         csum += n;
                     }
                 }
-                std::cout << "STORE to file '" << file_name << "'" << std::endl;
+                LOG(INFO) << "STORE to file '" << file_name << "'";
                 std::ofstream ofs(file_name);
-                serialize(ofs);
+                auto bytes = serialize(ofs);
+                LOG(INFO) << "STORE space usage '" << file_name << "'";
+                std::ofstream vofs(file_name+".html");
+                sdsl::write_structure<sdsl::HTML_FORMAT>(vofs,*this,m_docidx);
+                LOG(INFO) << "abspos index size : " << bytes / (1024*1024) << " MB";
             }
         }
         size_type serialize(std::ostream& out, sdsl::structure_tree_node* v=NULL, std::string name="") const
@@ -57,7 +66,6 @@ class index_abspos
             sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
             size_type written_bytes = 0;
             written_bytes += sdsl::write_member(m_num_lists,out,child,"num plists");
-            written_bytes += m_docidx.serialize(out,child,"invidx");
 
             auto* listdata = sdsl::structure_tree::add_child(child, "list metadata","list metadata");
             out.write((const char*)m_meta_data.data(), m_meta_data.size()*sizeof(abs_metadata));
@@ -71,7 +79,6 @@ class index_abspos
         void load(std::ifstream& ifs)
         {
             sdsl::read_member(m_num_lists,ifs);
-            m_docidx.load(ifs);
             m_meta_data.resize(m_num_lists);
             ifs.read((char*)m_meta_data.data(),m_num_lists*sizeof(abs_metadata));
             m_data.load(ifs);

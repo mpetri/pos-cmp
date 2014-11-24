@@ -52,17 +52,18 @@ include_directories("${PROJECT_SOURCE_DIR}/external/googletest/include"
                      ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
                      ${CMAKE_HOME_DIRECTORY}/external/googletest/include
                      ${CMAKE_HOME_DIRECTORY}/external/FastPFor/headers/
+                     ${CMAKE_HOME_DIRECTORY}/external/easyloggingpp/src/
                     )
 
 
 
 add_executable(unittest.x src/unittest.cpp)
-target_link_libraries(unittest.x gtest_main sdsl fastpfor_lib)
+target_link_libraries(unittest.x gtest_main sdsl fastpfor_lib pthread)
 enable_testing()
 add_test(TestsPass unittest.x)
 
 add_executable(index-create.x src/index_create.cpp)
-target_link_libraries(index-create.x sdsl fastpfor_lib)
+target_link_libraries(index-create.x sdsl fastpfor_lib pthread)
 
 add_executable(index-verify.x src/index_verify.cpp)
-target_link_libraries(index-verify.x sdsl fastpfor_lib)
+target_link_libraries(index-verify.x sdsl fastpfor_lib pthread)

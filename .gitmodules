@@ -7,3 +7,6 @@
 [submodule "external/FastPFor"]
 	path = external/FastPFor
 	url = https://github.com/lemire/FastPFor.git
+[submodule "external/easyloggingpp"]
+	path = external/easyloggingpp
+	url = https://github.com/easylogging/easyloggingpp.git

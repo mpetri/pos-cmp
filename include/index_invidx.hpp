@@ -4,6 +4,8 @@
 #include "rank_functions.hpp"
 #include "range_iterators.hpp"
 
+#include "easylogging++.h"
+
 #pragma pack(1)
 struct list_metadata {
     uint64_t id_offset;
@@ -62,7 +64,7 @@ class index_invidx
         {
             file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this)+".idx";
             if (utils::file_exists(file_name)) {  // load
-                std::cout << "LOAD from file '" << file_name << "'" << std::endl;
+                LOG(INFO) << "LOAD from file '" << file_name << "'";
                 std::ifstream ifs(file_name);
                 load(ifs);
             } else { // construct
@@ -72,6 +74,7 @@ class index_invidx
                 sdsl::load_from_file(m_dp,col.file_map[KEY_DOCPERM]);
                 // (3) postings lists
                 {
+                    LOG(INFO) << "CONSTRUCT inverted index";
                     sdsl::int_vector_mapper<> D(col.file_map[KEY_D]);
                     sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
                     bit_ostream bvi(m_id_data);
@@ -82,6 +85,7 @@ class index_invidx
                     size_t csum = C[0] + C[1];
                     for (size_t i=2; i<C.size(); i++) {
                         size_t n = C[i];
+                        LOG_EVERY_N(C.size()/10, INFO) << "Construct invidx list " << i << " (" << n << ")";
                         std::vector<uint32_t> tmp(D.begin()+csum,D.begin()+csum+ n);
                         std::sort(tmp.begin(),tmp.end());
 
@@ -99,10 +103,16 @@ class index_invidx
 
                         csum += n;
                     }
+                    LOG(INFO) << "Number of terms: " << C.size()-2;
+                    LOG(INFO) << "Number of postings: " << csum - C[0] + C[1];
                 }
-                std::cout << "STORE to file '" << file_name << "'" << std::endl;
+                LOG(INFO) << "STORE to file '" << file_name << "'";
                 std::ofstream ofs(file_name);
-                serialize(ofs);
+                auto bytes = serialize(ofs);
+                std::ofstream vofs(file_name+".html");
+                sdsl::write_structure<sdsl::HTML_FORMAT>(vofs,*this);
+
+                LOG(INFO) << "inverted index size : " << bytes / (1024*1024) << " MB";
             }
         }
         size_type serialize(std::ostream& out, sdsl::structure_tree_node* v=NULL, std::string name="") const

@@ -10,6 +10,8 @@
 #include "utils.hpp"
 #include "doc_perm.hpp"
 
+#include "easylogging++.h"
+
 const std::string KEY_PREFIX = "text.";
 const std::string URLORDER = "url2id.txt";
 const std::string DOCNAMES = "doc_names.txt";
@@ -51,6 +53,7 @@ struct collection {
         utils::create_directory(results_directory);
         /* make sure the necessary files are present */
         if (! utils::file_exists(path+"/"+KEY_PREFIX+KEY_TEXT)) {
+            LOG(FATAL) << "collection path does not contain text.";
             throw std::runtime_error("collection path does not contain text.");
         }
 
@@ -59,14 +62,14 @@ struct collection {
             auto file_path = path+"/"+KEY_PREFIX+key;
             if (utils::file_exists(file_path)) {
                 file_map[key] = file_path;
-                std::cout << "FOUND '" << key << "' at '" << file_path <<"'"<< std::endl;
+                LOG(INFO) << "FOUND '" << key << "' at '" << file_path <<"'";
             }
         }
 
         /* create stuff we are missing */
         if (file_map.count(KEY_DOCPERM) == 0) {
             auto docperm_path = path+"/"+KEY_PREFIX+KEY_DOCPERM;
-            std::cout << "CONSTRUCT " << KEY_DOCPERM << std::endl;
+            LOG(INFO) << "CONSTRUCT " << KEY_DOCPERM;
             doc_perm dp;
             if (utils::file_exists(path+"/"+URLORDER) && utils::file_exists(path+"/"+DOCNAMES)) {
                 dp.is_identity = false;
@@ -93,7 +96,7 @@ struct collection {
                         dp.id2len[itr->second] = j;
                         dp.len2id[j] = itr->second;
                     } else {
-                        std::cerr << "could not find mapping for '" << doc_name << "'" << std::endl;
+                        LOG(ERROR) << "could not find mapping for '" << doc_name << "'";
                     }
                     j++;
                 }
@@ -105,12 +108,12 @@ struct collection {
             file_map[KEY_DOCPERM] = docperm_path;
         }
         if (file_map.count(KEY_TEXTPERM) == 0) {
-            std::cout << "CONSTRUCT " << KEY_TEXTPERM << std::endl;
             doc_perm dp;
             sdsl::load_from_file(dp,file_map[KEY_DOCPERM]);
             if (dp.is_identity) {
                 file_map[KEY_TEXTPERM] = file_map[KEY_TEXT];
             } else {
+                LOG(INFO) << "CONSTRUCT " << KEY_TEXTPERM;
                 sdsl::int_vector<> text;
                 sdsl::load_from_file(text,file_map[KEY_TEXT]);
                 sdsl::bit_vector doc_border(text.size(), 0);
@@ -146,7 +149,7 @@ struct collection {
         }
 
         if (file_map.count(KEY_SA) == 0) {
-            std::cout << "CONSTRUCT " << KEY_SA << std::endl;
+            LOG(INFO) << "CONSTRUCT " << KEY_SA;
             sdsl::int_vector<> sa;
             sdsl::qsufsort::construct_sa(sa,file_map[KEY_TEXTPERM].c_str(),0);
             auto sa_path = path+"/"+KEY_PREFIX+KEY_SA;
@@ -154,7 +157,7 @@ struct collection {
             file_map[KEY_SA] = sa_path;
         }
         if (file_map.count(KEY_C) == 0) {
-            std::cout << "CONSTRUCT " << KEY_C << std::endl;
+            LOG(INFO) << "CONSTRUCT " << KEY_C;
             sdsl::int_vector_mapper<> text(file_map[KEY_TEXTPERM]);
             std::unordered_map<uint64_t,uint64_t> tmpC(5000000);
             for (uint64_t i=0; i < text.size(); ++i) {
@@ -170,7 +173,7 @@ struct collection {
             file_map[KEY_C] = c_path;
         }
         if (file_map.count(KEY_DBV) == 0) {
-            std::cout << "CONSTRUCT " << KEY_DBV << std::endl;
+            LOG(INFO) << "CONSTRUCT " << KEY_DBV;
             auto dbv_path = path+"/"+KEY_PREFIX+KEY_DBV;
             sdsl::int_vector_mapper<> text(file_map[KEY_TEXTPERM]);
             sdsl::bit_vector doc_border(text.size(), 0);
@@ -181,7 +184,7 @@ struct collection {
             file_map[KEY_DBV] = dbv_path;
         }
         if (file_map.count(KEY_DOCLEN) == 0) {
-            std::cout << "CONSTRUCT " << KEY_DOCLEN << std::endl;
+            LOG(INFO) << "CONSTRUCT " << KEY_DOCLEN;
             auto doclen_path = path+"/"+KEY_PREFIX+KEY_DOCLEN;
             sdsl::bit_vector doc_border;
             sdsl::load_from_file(doc_border, file_map[KEY_DBV]);
@@ -206,7 +209,7 @@ struct collection {
         }
         if (file_map.count(KEY_POSPL) == 0) {
             auto pospl_path = path+"/"+KEY_PREFIX+KEY_POSPL;
-            std::cout << "CONSTRUCT " << KEY_POSPL << std::endl;
+            LOG(INFO) << "CONSTRUCT " << KEY_POSPL;
             sdsl::int_vector_mapper<> SA(file_map[KEY_SA]);
             sdsl::int_vector_mapper<> C(file_map[KEY_C]);
             sdsl::int_vector_buffer<> oPOSPL(pospl_path,std::ios::out,1024*1024,SA.width());
@@ -225,7 +228,7 @@ struct collection {
         }
         if (file_map.count(KEY_D) == 0) {
             auto docpl_path = path+"/"+KEY_PREFIX+KEY_D;
-            std::cout << "CONSTRUCT " << KEY_D << std::endl;
+            LOG(INFO) << "CONSTRUCT " << KEY_D;
             sdsl::int_vector_mapper<> SA(file_map[KEY_SA]);
             sdsl::bit_vector doc_border;
             sdsl::load_from_file(doc_border, file_map[KEY_DBV]);
