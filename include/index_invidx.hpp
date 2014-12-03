@@ -151,13 +151,13 @@ class index_invidx
             m_id_data.load(ifs);
             m_freq_data.load(ifs);
         }
-        std::pair<typename id_list_type::iterator_pair,typename freq_list_type::iterator_pair>
+        std::pair<typename id_list_type::list_type,typename freq_list_type::list_type>
         list(size_t i) const
         {
             bit_istream isi(m_id_data);
             bit_istream isf(m_freq_data);
-            return make_pair(id_list_type::iterators(isi,m_meta_data[i].id_offset),
-                             freq_list_type::iterators(isf,m_meta_data[i].freq_offset)
+            return make_pair(id_list_type::materialize(isi,m_meta_data[i].id_offset),
+                             freq_list_type::materialize(isf,m_meta_data[i].freq_offset)
                             );
         }
 };

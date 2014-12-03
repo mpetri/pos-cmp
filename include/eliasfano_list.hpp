@@ -6,7 +6,9 @@
 #include "bit_coders.hpp"
 #include "bit_magic.hpp"
 
-template<bool t_sorted>
+#include "list_basics.hpp"
+
+template<bool t_sorted,bool t_compact>
 class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_t,std::ptrdiff_t>
 {
     public:
@@ -27,11 +29,35 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
     public:
         ef_iterator(const bit_istream& is,size_t start_offset,bool end)
         {
+            static_assert(t_compact == false,"Can't use this constructor with compact ef representation.");
             m_data = is.data();
             is.seek(start_offset);
             m_size = is.decode<coder::elias_gamma>();
             m_universe = is.decode<coder::elias_gamma>();
-            m_width_low = is.decode<coder::elias_gamma>();
+            uint8_t logm = sdsl::bits::hi(m_size)+1;
+            uint8_t logu = sdsl::bits::hi(m_universe)+1;
+            if (logm == logu) logm--;
+            m_width_low = logu - logm;
+            m_low_offset = is.tellg();
+            m_high_offset = m_low_offset + m_size*m_width_low;
+            m_cur_offset = end ? m_size : 0;
+            m_cur_high_offset = 0;
+            if (m_cur_offset == 0) {
+                if (high(0) != 1) {
+                    m_cur_high_offset = sdsl::bits::next(m_data,m_high_offset+1) - m_high_offset;
+                }
+            }
+        }
+        ef_iterator(const bit_istream& is,size_t start_offset,bool end,size_type size,size_type universe)
+            : m_size(size) , m_universe(universe)
+        {
+            uint8_t logm = sdsl::bits::hi(m_size)+1;
+            uint8_t logu = sdsl::bits::hi(m_universe)+1;
+            if (logm == logu) logm--;
+            m_width_low = logu - logm;
+
+            m_data = is.data();
+            is.seek(start_offset);
             m_low_offset = is.tellg();
             m_high_offset = m_low_offset + m_size*m_width_low;
             m_cur_offset = end ? m_size : 0;
@@ -198,11 +224,11 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
         }
 };
 
-template<bool t_sorted = true>
+template<bool t_sorted = true,bool t_compact = false>
 struct eliasfano_list {
     using size_type = sdsl::int_vector<>::size_type;
-    using iterator_type = ef_iterator<t_sorted>;
-    using iterator_pair = std::pair<iterator_type,iterator_type>;
+    using iterator_type = ef_iterator<t_sorted,t_compact>;
+    using list_type = list_dummy<iterator_type>;
 
     template<class t_itr>
     static size_type create(bit_ostream& os,t_itr begin,t_itr end)
@@ -222,14 +248,12 @@ struct eliasfano_list {
         if (logm == logu) logm--;
         uint8_t width_low = logu - logm;
 
-        // write size
-        os.encode<coder::elias_gamma>(m);
-
-        // write universe size
-        os.encode<coder::elias_gamma>(u);
-
-        // write width_low
-        os.encode<coder::elias_gamma>(width_low);
+        if (!t_compact) {
+            // write size
+            os.encode<coder::elias_gamma>(m);
+            // write universe size
+            os.encode<coder::elias_gamma>(u);
+        }
 
         // write low
         os.expand_if_needed(m*width_low);
@@ -244,7 +268,8 @@ struct eliasfano_list {
         }
 
         // write high
-        os.expand_if_needed(3*m); // ~m overestimate
+        size_type num_zeros = (u >> width_low);
+        os.expand_if_needed(num_zeros+m);
         itr = begin;
         size_type last_high=0;
         last = 0;
@@ -257,13 +282,25 @@ struct eliasfano_list {
             last_high = cur_high;
             ++itr;
         }
+        // terminator bit so no checks for end of bitstream
+        // are needed inside the iterators
+        os.put(1);
 
         return data_offset;
     }
 
-    static std::pair<iterator_type,iterator_type> iterators(const bit_istream& is,size_t start_offset)
+    static list_dummy<iterator_type> materialize(const bit_istream& is,size_t start_offset)
     {
-        return make_pair(iterator_type(is,start_offset,false),iterator_type(is,start_offset,true));
+        return list_dummy<iterator_type>(iterator_type(is,start_offset,false),iterator_type(is,start_offset,true));
+    }
+
+    static size_type estimate_size(size_type m,size_type u)
+    {
+        uint8_t logm = sdsl::bits::hi(m)+1;
+        uint8_t logu = sdsl::bits::hi(u)+1;
+        if (logm == logu) logm--;
+        uint8_t width_low = logu - logm;
+        return width_low*m + 2*m;
     }
 };
 

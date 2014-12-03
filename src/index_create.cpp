@@ -58,7 +58,12 @@ int main(int argc,const char* argv[])
 
     /* create index */
     using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
-    index_abspos<eliasfano_list<true>,invidx_type> index(col);
+    {
+        index_abspos<optpfor_list<128,true>,invidx_type> index(col);
+    }
+    {
+        index_nextword<optpfor_list<128,true>,invidx_type> index(col);
+    }
 
     return 0;
 }

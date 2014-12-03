@@ -56,13 +56,13 @@ int verify_index(t_idx& index,collection& col)
             LOG_EVERY_N(C.size()/10, INFO) << "Verify invidx list " << 100*i/C.size() << "% (" << n << ")";
             std::sort(tmp.begin(),tmp.end());
 
-            auto itrs = index.m_docidx.list(i);
-            auto id_itrs = itrs.first;
-            auto freq_itrs = itrs.second;
+            auto lists = index.m_docidx.list(i);
+            auto id_list = lists.first;
+            auto freq_list = lists.second;
 
             // check freqs
-            auto ftmp = freq_itrs.first;
-            auto fend = freq_itrs.second;
+            auto ftmp = freq_list.begin();
+            auto fend = freq_list.end();
             size_t cur = 0;
             while (ftmp != fend) {
                 auto cur_freq = *ftmp;
@@ -81,8 +81,8 @@ int verify_index(t_idx& index,collection& col)
             auto last = std::unique(tmp.begin(),tmp.end());
             auto un = std::distance(tmp.begin(),last);
             auto curid = tmp.begin();
-            auto itmp = id_itrs.first;
-            auto iend = id_itrs.second;
+            auto itmp = id_list.begin();
+            auto iend = id_list.end();
             if ((size_t)un != itmp.size()) {
                 LOG_N_TIMES(5,ERROR) << "ERROR IN IDS SIZE of id <" << i << ">";
             }
@@ -114,13 +114,13 @@ int verify_index(t_idx& index,collection& col)
             auto begin = POSPL.begin()+csum;
             auto end = POSPL.begin()+csum+n;
 
-            auto itrs = index.list(i);
+            auto list = index.list(i);
 
             // check ids
             auto un = std::distance(begin,end);
             auto curid = begin;
-            auto itmp = itrs.first;
-            auto iend = itrs.second;
+            auto itmp = list.begin();
+            auto iend = list.end();
             if ((size_t)un != itmp.size()) {
                 LOG(ERROR) << "ERROR IN IDS SIZE of id <" << i << ">: " << un << " - " << itmp.size();
                 return -1;
@@ -140,7 +140,38 @@ int verify_index(t_idx& index,collection& col)
     return 0;
 }
 
+template<class t_idx>
+void verify_nextword_index(t_idx& index,collection& col)
+{
+    LOG(INFO) << "VERIFY NEXTWORD";
+    sdsl::int_vector_mapper<> text(col.file_map[KEY_TEXTPERM]);
+    sdsl::int_vector_mapper<> CC(col.file_map[KEY_CC]);
+    for (size_t i=0; i<CC.size(); i++) {
+        uint64_t sym2 = CC[i] & ((1 << text.width())-1);
+        uint64_t sym1 = CC[i] >> text.width();
 
+        if (index.exists(CC[i]) == false) {
+            LOG(ERROR) << "ERROR IN id <" << i << ">: " << CC[i] << " <" << sym1 << "," << sym2 << ">";
+            continue;
+        } else {
+            auto list = index.list(CC[i]);
+            auto itr = list.begin();
+            auto end = list.end();
+            bool error = false;
+            while (itr != end) {
+                auto text_pos = *itr;
+                if (text[text_pos] != sym1 || text[text_pos+1] != sym2) {
+                    LOG(ERROR) << i << " ERROR with phrase ("<<CC[i]<<") <"<< sym1 << "," << sym2 << "> at pos << " << text_pos;
+                    LOG(ERROR) << "text[] = " << text[text_pos-1] << " , " << text[text_pos] << " , " << text[text_pos+1];
+                    error = true;
+                }
+                ++itr;
+            }
+            if (error) return;
+        }
+    }
+    LOG(INFO) << "NEXTWORD - OK.";
+}
 
 int main(int argc,const char* argv[])
 {
@@ -165,5 +196,17 @@ int main(int argc,const char* argv[])
         index_abspos<eliasfano_list<true>,invidx_type> index(col);
         verify_index(index,col);
     }
+    {
+        using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
+        index_nextword<eliasfano_list<true>,invidx_type> index(col);
+        verify_nextword_index(index,col);
+    }
+    {
+        using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
+        index_nextword<optpfor_list<128,true>,invidx_type> index(col);
+        verify_nextword_index(index,col);
+    }
+
+
     return 0;
 }

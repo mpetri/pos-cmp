@@ -5,6 +5,7 @@
 #include "bit_coders.hpp"
 #include "eliasfano_list.hpp"
 #include "optpfor_list.hpp"
+#include "intersection.hpp"
 
 #include <functional>
 #include <random>
@@ -442,9 +443,9 @@ TEST(eliasfano, iterate)
         }
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<true>::iterators(is,0);
-            auto begin = itrs.first;
-            auto end = itrs.second;
+            auto list = eliasfano_list<true>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
             ASSERT_EQ(begin.size(),ln);
 
             size_t i = 0;
@@ -479,9 +480,9 @@ TEST(eliasfano, iterate_skip)
         }
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<true>::iterators(is,0);
-            auto begin = itrs.first;
-            auto end = itrs.second;
+            auto list = eliasfano_list<true>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
             ASSERT_EQ(begin.size(),ln);
 
             size_t i = 0;
@@ -519,8 +520,8 @@ TEST(eliasfano, skip_asign)
         }
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<true>::iterators(is,0);
-            auto begin = itrs.first;
+            auto list = eliasfano_list<true>::materialize(is,0);
+            auto begin = list.begin();
             ASSERT_EQ(begin.size(),ln);
             for (size_t i=5; i<ln; i+=5) {
                 ASSERT_EQ(*(begin+i),A[i]);
@@ -548,9 +549,9 @@ TEST(eliasfano, unsorted_iterate)
         }
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<false>::iterators(is,0);
-            auto begin = itrs.first;
-            auto end = itrs.second;
+            auto list = eliasfano_list<false>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
             ASSERT_EQ(begin.size(),len);
 
             size_t i = 0;
@@ -582,9 +583,9 @@ TEST(eliasfano, unsorted_iterate_skip)
         }
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<false>::iterators(is,0);
-            auto begin = itrs.first;
-            auto end = itrs.second;
+            auto list = eliasfano_list<false>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
             ASSERT_EQ(begin.size(),len);
 
             size_t i = 0;
@@ -623,8 +624,8 @@ TEST(eliasfano, skip_rand_exist)
 
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<true>::iterators(is,0);
-            auto itr = itrs.first;
+            auto list = eliasfano_list<true>::materialize(is,0);
+            auto itr = list.begin();
             size_t ln = std::distance(A.begin(),last);
             for (size_t j=dis(gen)%255; j<ln; j+=(dis(gen)%255)) {
                 ASSERT_TRUE(itr.skip(A[j]));
@@ -656,8 +657,8 @@ TEST(eliasfano, skip_rand_oneoff)
 
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<true>::iterators(is,0);
-            auto itr = itrs.first;
+            auto list = eliasfano_list<true>::materialize(is,0);
+            auto itr = list.begin();
             size_t ln = std::distance(A.begin(),last);
             for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
                 if (A[j-1] == A[j]-1) continue;
@@ -691,8 +692,8 @@ TEST(eliasfano, skip_rand_largegaps)
 
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<true>::iterators(is,0);
-            auto itr = itrs.first;
+            auto list = eliasfano_list<true>::materialize(is,0);
+            auto itr = list.begin();
             size_t ln = std::distance(A.begin(),last);
             for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
                 if (A[j-1] == A[j]-1) continue;
@@ -727,8 +728,8 @@ TEST(eliasfano, skip_rand_largegaps_hit)
 
         {
             bit_istream is(bv);
-            auto itrs = eliasfano_list<true>::iterators(is,0);
-            auto itr = itrs.first;
+            auto list = eliasfano_list<true>::materialize(is,0);
+            auto itr = list.begin();
             size_t ln = std::distance(A.begin(),last);
             for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
                 ASSERT_TRUE(itr.skip(A[j]));
@@ -761,9 +762,9 @@ TEST(optpfor, iterate)
         }
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,true>::iterators(is,0);
-            auto begin = itrs.first;
-            auto end = itrs.second;
+            auto list = optpfor_list<128,true>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
             ASSERT_EQ(begin.size(),ln);
 
             size_t i = 0;
@@ -798,9 +799,9 @@ TEST(optpfor, iterate_skip)
         }
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,true>::iterators(is,0);
-            auto begin = itrs.first;
-            auto end = itrs.second;
+            auto list = optpfor_list<128,true>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
             ASSERT_EQ(begin.size(),ln);
 
             size_t i = 0;
@@ -838,8 +839,8 @@ TEST(optpfor, skip_asign)
         }
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,true>::iterators(is,0);
-            auto begin = itrs.first;
+            auto list = optpfor_list<128,true>::materialize(is,0);
+            auto begin = list.begin();
             ASSERT_EQ(begin.size(),ln);
             for (size_t i=5; i<ln; i+=5) {
                 ASSERT_EQ(*(begin+i),A[i]);
@@ -867,9 +868,9 @@ TEST(optpfor, unsorted_iterate)
         }
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,false>::iterators(is,0);
-            auto begin = itrs.first;
-            auto end = itrs.second;
+            auto list = optpfor_list<128,false>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
             ASSERT_EQ(begin.size(),len);
 
             size_t i = 0;
@@ -901,9 +902,9 @@ TEST(optpfor, unsorted_iterate_skip)
         }
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,false>::iterators(is,0);
-            auto begin = itrs.first;
-            auto end = itrs.second;
+            auto list = optpfor_list<128,false>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
             ASSERT_EQ(begin.size(),len);
 
             size_t i = 0;
@@ -943,8 +944,8 @@ TEST(optpfor, skip_rand_exist)
 
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,true>::iterators(is,0);
-            auto itr = itrs.first;
+            auto list = optpfor_list<128,true>::materialize(is,0);
+            auto itr = list.begin();
             size_t ln = std::distance(A.begin(),last);
             for (size_t j=dis(gen)%255; j<ln; j+=(dis(gen)%255)) {
                 ASSERT_TRUE(itr.skip(A[j]));
@@ -976,8 +977,8 @@ TEST(optpfor, skip_rand_oneoff)
 
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,true>::iterators(is,0);
-            auto itr = itrs.first;
+            auto list = optpfor_list<128,true>::materialize(is,0);
+            auto itr = list.begin();
             size_t ln = std::distance(A.begin(),last);
             for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
                 if (A[j-1] == A[j]-1) continue;
@@ -1011,8 +1012,8 @@ TEST(optpfor, skip_rand_largegaps)
 
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,true>::iterators(is,0);
-            auto itr = itrs.first;
+            auto list = optpfor_list<128,true>::materialize(is,0);
+            auto itr = list.begin();
             size_t ln = std::distance(A.begin(),last);
             for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
                 if (A[j-1] == A[j]-1) continue;
@@ -1047,8 +1048,8 @@ TEST(optpfor, skip_rand_largegaps_hit)
 
         {
             bit_istream is(bv);
-            auto itrs = optpfor_list<128,true>::iterators(is,0);
-            auto itr = itrs.first;
+            auto list = optpfor_list<128,true>::materialize(is,0);
+            auto itr = list.begin();
             size_t ln = std::distance(A.begin(),last);
             for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
                 ASSERT_TRUE(itr.skip(A[j]));
@@ -1058,6 +1059,174 @@ TEST(optpfor, skip_rand_largegaps_hit)
     }
 }
 
+
+TEST(intersection, eliasfano)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 10000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        size_t len2 = ldis(gen);
+        std::vector<uint32_t> B(len2);
+        for (size_t j=0; j<len2; j++) B[j] = dis(gen);
+        std::sort(B.begin(),B.end());
+        auto lastB = std::unique(B.begin(),B.end());
+
+        sdsl::bit_vector bv;
+        size_t offsetA,offsetB;
+        {
+            bit_ostream os(bv);
+            offsetA = eliasfano_list<true>::create(os,A.begin(),last);
+            offsetB = eliasfano_list<true>::create(os,B.begin(),lastB);
+        }
+        {
+            bit_istream is(bv);
+            auto listA = eliasfano_list<true>::materialize(is,offsetA);
+            auto listB = eliasfano_list<true>::materialize(is,offsetB);
+            auto res = intersect(listA,listB);
+
+            std::vector<uint32_t> ires;
+            std::set_intersection(A.begin(),A.end(),B.begin(),B.end(),std::back_inserter(ires));
+            ASSERT_EQ(ires.size(),res.size());
+            for (size_t i=0; i<ires.size(); i++) ASSERT_EQ(ires[i],res[i]);
+        }
+    }
+}
+
+TEST(intersection, optpfor)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 10000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        size_t len2 = ldis(gen);
+        std::vector<uint32_t> B(len2);
+        for (size_t j=0; j<len2; j++) B[j] = dis(gen);
+        std::sort(B.begin(),B.end());
+        auto lastB = std::unique(B.begin(),B.end());
+
+        sdsl::bit_vector bv;
+        size_t offsetA,offsetB;
+        {
+            bit_ostream os(bv);
+            offsetA = optpfor_list<128,true>::create(os,A.begin(),last);
+            offsetB = optpfor_list<128,true>::create(os,B.begin(),lastB);
+        }
+        {
+            bit_istream is(bv);
+            auto listA = optpfor_list<128,true>::materialize(is,offsetA);
+            auto listB = optpfor_list<128,true>::materialize(is,offsetB);
+            auto res = intersect(listA,listB);
+
+            std::vector<uint32_t> ires;
+            std::set_intersection(A.begin(),A.end(),B.begin(),B.end(),std::back_inserter(ires));
+            ASSERT_EQ(ires.size(),res.size());
+            for (size_t i=0; i<ires.size(); i++) ASSERT_EQ(ires[i],res[i]);
+        }
+    }
+}
+
+TEST(intersection, mixed)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 10000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        size_t len2 = ldis(gen);
+        std::vector<uint32_t> B(len2);
+        for (size_t j=0; j<len2; j++) B[j] = dis(gen);
+        std::sort(B.begin(),B.end());
+        auto lastB = std::unique(B.begin(),B.end());
+
+        sdsl::bit_vector bv;
+        size_t offsetA,offsetB;
+        {
+            bit_ostream os(bv);
+            offsetA = optpfor_list<128,true>::create(os,A.begin(),last);
+            offsetB = eliasfano_list<true>::create(os,B.begin(),lastB);
+        }
+        {
+            bit_istream is(bv);
+            auto listA = optpfor_list<128,true>::materialize(is,offsetA);
+            auto listB = eliasfano_list<true>::materialize(is,offsetB);
+            auto res = intersect(listA,listB);
+
+            std::vector<uint32_t> ires;
+            std::set_intersection(A.begin(),A.end(),B.begin(),B.end(),std::back_inserter(ires));
+            ASSERT_EQ(ires.size(),res.size());
+            for (size_t i=0; i<ires.size(); i++) ASSERT_EQ(ires[i],res[i]);
+        }
+    }
+}
+
+
+TEST(intersection, multiple)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 10000);
+
+    for (size_t i=0; i<n; i++) {
+        std::vector<size_t> list_offsets;
+        sdsl::bit_vector bv;
+        std::vector<uint32_t> I;
+        {
+            bit_ostream os(bv);
+            for (size_t j=0; j<5; j++) {
+                size_t len = ldis(gen);
+                std::vector<uint32_t> A(len);
+                for (size_t j=0; j<len; j++) A[j] = dis(gen);
+                std::sort(A.begin(),A.end());
+                auto last = std::unique(A.begin(),A.end());
+                size_t offset = optpfor_list<128,true>::create(os,A.begin(),last);
+                list_offsets.push_back(offset);
+
+                if (j==0) I = A;
+                else {
+                    std::vector<uint32_t> ires;
+                    std::set_intersection(A.begin(),last,I.begin(),I.end(),std::back_inserter(ires));
+                    I = ires;
+                }
+            }
+        }
+        {
+            std::vector< optpfor_list<128,true>::list_type > lists;
+            bit_istream is(bv);
+            for (const auto& o : list_offsets) {
+                lists.emplace_back(optpfor_list<128,true>::materialize(is,o));
+            }
+
+            auto res = intersect(lists);
+            ASSERT_EQ(I.size(),res.size());
+            for (size_t i=0; i<I.size(); i++) ASSERT_EQ(I[i],res[i]);
+        }
+    }
+}
 
 int main(int argc, char* argv[])
 {

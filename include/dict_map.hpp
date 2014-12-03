@@ -10,6 +10,17 @@ struct query_t {
     std::vector<uint64_t> ids;
 };
 
+std::ostream&
+operator<<(std::ostream& os, const query_t& q)
+{
+    os << "id=" << q.id << " c=" << q.complete << " ids=[";
+    for (const auto& id : q.ids) {
+        os << id << ",";
+    }
+    os << "] (" << q.org << ")";
+    return os;
+}
+
 struct dict_map {
     std::unordered_map<std::string,uint64_t> id_mapping;
     std::unordered_map<uint64_t,std::string> reverse_id_mapping;
@@ -22,15 +33,19 @@ struct dict_map {
             std::string term_mapping;
             while (std::getline(dfs,term_mapping)) {
                 auto sep_pos = term_mapping.find(' ');
-                auto term = term_mapping.substr(0,sep_pos);
-                auto idstr = term_mapping.substr(sep_pos+1);
-                uint64_t id = std::stoull(idstr);
+                std::string term = "";
+                uint64_t id = 0;
+                if (sep_pos != 0) {
+                    term = term_mapping.substr(0,sep_pos);
+                    auto idstr = term_mapping.substr(sep_pos+1);
+                    id = std::stoull(idstr);
+                }
                 id_mapping[term] = id;
                 reverse_id_mapping[id] = term;
             }
         } else {
-            LOG(FATAL) << "dictionary file '" << file_name << "' not found."
-                       throw std::runtime_error("dictionary file '"+file_name+"' not found.");
+            LOG(FATAL) << "dictionary file '" << file_name << "' not found.";
+            throw std::runtime_error("dictionary file '"+file_name+"' not found.");
         }
     }
     query_t

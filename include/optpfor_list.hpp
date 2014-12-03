@@ -11,6 +11,8 @@
 #include "simdfastpfor.h"
 #include "deltautil.h"
 
+#include "list_basics.hpp"
+
 template<uint16_t t_block_size,bool t_sorted>
 class optpfor_iterator : public std::iterator<std::random_access_iterator_tag,uint64_t,std::ptrdiff_t>
 {
@@ -206,7 +208,7 @@ struct optpfor_list {
     using size_type = sdsl::int_vector<>::size_type;
     using comp_codec = FastPForLib::OPTPFor<t_block_size/32,FastPForLib::Simple16<false>>;
     using iterator_type = optpfor_iterator<t_block_size,t_sorted>;
-    using iterator_pair = std::pair<iterator_type,iterator_type>;
+    using list_type = list_dummy<iterator_type>;
     template<class t_itr>
     static size_type create(bit_ostream& os,t_itr begin,t_itr end)
     {
@@ -283,9 +285,9 @@ struct optpfor_list {
         return data_offset;
     }
 
-    static std::pair<iterator_type,iterator_type> iterators(const bit_istream& is,size_t start_offset)
+    static list_dummy<iterator_type> materialize(const bit_istream& is,size_t start_offset)
     {
-        return make_pair(iterator_type(is,start_offset,false),iterator_type(is,start_offset,true));
+        return list_dummy<iterator_type>(iterator_type(is,start_offset,false),iterator_type(is,start_offset,true));
     }
 };
 

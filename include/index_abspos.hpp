@@ -10,13 +10,13 @@ struct abs_metadata {
     uint64_t offset;
 };
 
-
 template<class t_pospl=optpfor_list<128,true>,class t_invidx = index_invidx<> >
 class index_abspos
 {
     public:
         using size_type = sdsl::int_vector<>::size_type;
         using plist_type = t_pospl;
+        using doclist_type = typename t_invidx::id_list_type;
         using invidx_type = t_invidx;
         const std::string name = "ABSPOS";
         std::string file_name;
@@ -55,7 +55,7 @@ class index_abspos
                 LOG(INFO) << "STORE to file '" << file_name << "'";
                 std::ofstream ofs(file_name);
                 auto bytes = serialize(ofs);
-                LOG(INFO) << "STORE space usage '" << file_name << "'";
+                LOG(INFO) << "STORE space usage '" << file_name << ".html'";
                 std::ofstream vofs(file_name+".html");
                 sdsl::write_structure<sdsl::HTML_FORMAT>(vofs,*this,m_docidx);
                 LOG(INFO) << "abspos index size : " << bytes / (1024*1024) << " MB";
@@ -69,7 +69,7 @@ class index_abspos
 
             auto* listdata = sdsl::structure_tree::add_child(child, "list metadata","list metadata");
             out.write((const char*)m_meta_data.data(), m_meta_data.size()*sizeof(abs_metadata));
-            written_bytes += m_meta_data.size()*sizeof(list_metadata);
+            written_bytes += m_meta_data.size()*sizeof(abs_metadata);
             sdsl::structure_tree::add_size(listdata, m_meta_data.size()*sizeof(abs_metadata));
 
             written_bytes += m_data.serialize(out,child,"list data");
@@ -83,10 +83,24 @@ class index_abspos
             ifs.read((char*)m_meta_data.data(),m_num_lists*sizeof(abs_metadata));
             m_data.load(ifs);
         }
-        typename plist_type::iterator_pair
+        typename plist_type::list_type
         list(size_t i) const
         {
             bit_istream is(m_data);
-            return plist_type::iterators(is,m_meta_data[i].offset);
+            return plist_type::materialize(is,m_meta_data[i].offset);
+        }
+        typename doclist_type::list_type
+        doc_list(size_t i) const
+        {
+            return m_docidx.list(i).first;
+        }
+        std::vector<typename doclist_type::list_type>
+        doc_lists(std::vector<uint64_t> ids)
+        {
+            std::vector<typename doclist_type::list_type> lists;
+            for (const auto& id : ids) {
+                lists.emplace_back(doc_list(id));
+            }
+            return lists;
         }
 };

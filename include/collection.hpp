@@ -6,6 +6,7 @@
 #include <sdsl/int_vector_mapper.hpp>
 #include <sdsl/rank_support.hpp>
 #include <sdsl/select_support.hpp>
+#include <sdsl/sd_vector.hpp>
 
 #include "utils.hpp"
 #include "doc_perm.hpp"
@@ -20,6 +21,8 @@ const std::string DICTFILE = "dict.txt";
 const std::string KEY_SA = "SA";
 const std::string KEY_TEXT = "TEXT";
 const std::string KEY_C = "C";
+const std::string KEY_CC = "CC";
+const std::string KEY_SCC = "SCC";
 const std::string KEY_DBV = "DBV";
 const std::string KEY_D = "D";
 const std::string KEY_DOCPERM = "DPERM";
@@ -35,6 +38,8 @@ std::vector<std::string> collection_keys = {KEY_SA,
                                             KEY_DOCPERM,
                                             KEY_DBV,
                                             KEY_C,
+                                            KEY_CC,
+                                            KEY_SCC,
                                             KEY_TEXTPERM
                                            };
 
@@ -106,6 +111,7 @@ struct collection {
             }
             sdsl::store_to_file(dp,docperm_path);
             file_map[KEY_DOCPERM] = docperm_path;
+            LOG(INFO) << "DONE";
         }
         if (file_map.count(KEY_TEXTPERM) == 0) {
             doc_perm dp;
@@ -145,6 +151,7 @@ struct collection {
                 }
                 TPERM[cur] = 0; // terminate to allow suffix sorting
                 file_map[KEY_TEXTPERM] = tp_path;
+                LOG(INFO) << "DONE";
             }
         }
 
@@ -171,6 +178,45 @@ struct collection {
             auto c_path = path+"/"+KEY_PREFIX+KEY_C;
             sdsl::store_to_file(C,c_path);
             file_map[KEY_C] = c_path;
+            LOG(INFO) << "DONE";
+        }
+        if (file_map.count(KEY_CC) == 0) {
+            LOG(INFO) << "CONSTRUCT " << KEY_CC;
+            sdsl::int_vector_mapper<> text(file_map[KEY_TEXTPERM]);
+            sdsl::int_vector_mapper<> C(file_map[KEY_C]);
+            LOG(INFO) << "   - determine 2-token syms";
+            std::unordered_map<uint64_t,uint64_t> tmpCC(50000000);
+            for (uint64_t i=0; i < text.size()-1; ++i) {
+                uint64_t sym = (text[i] << text.width()) + text[i+1];
+                tmpCC[sym] += 1;
+            }
+
+            LOG(INFO) << "   - sort 2-token syms";
+            sdsl::int_vector<> CC(tmpCC.size());
+            size_t i = 0;
+            for (const auto& p : tmpCC) {
+                CC[i++] = p.first;
+            }
+            std::sort(CC.begin(),CC.end());
+            {
+                LOG(INFO) << "   - store syms";
+                sdsl::util::bit_compress(CC);
+                auto cc_path = path+"/"+KEY_PREFIX+KEY_CC;
+                sdsl::store_to_file(CC,cc_path);
+                file_map[KEY_CC] = cc_path;
+            }
+            {
+                sdsl::int_vector<> SCC(tmpCC.size());
+                for (size_t i=0; i<CC.size(); i++) {
+                    auto cnt = tmpCC[CC[i]];
+                    SCC[i] = cnt;
+                }
+                auto SCC_path = path+"/"+KEY_PREFIX+KEY_SCC;
+                sdsl::util::bit_compress(SCC);
+                sdsl::store_to_file(SCC,SCC_path);
+                file_map[KEY_SCC] = SCC_path;
+            }
+            LOG(INFO) << "DONE";
         }
         if (file_map.count(KEY_DBV) == 0) {
             LOG(INFO) << "CONSTRUCT " << KEY_DBV;
@@ -182,6 +228,7 @@ struct collection {
             }
             sdsl::store_to_file(doc_border,dbv_path);
             file_map[KEY_DBV] = dbv_path;
+            LOG(INFO) << "DONE";
         }
         if (file_map.count(KEY_DOCLEN) == 0) {
             LOG(INFO) << "CONSTRUCT " << KEY_DOCLEN;
@@ -206,6 +253,7 @@ struct collection {
             }
             sdsl::store_to_file(doc_lens,doclen_path);
             file_map[KEY_DOCLEN] = doclen_path;
+            LOG(INFO) << "DONE";
         }
         if (file_map.count(KEY_POSPL) == 0) {
             auto pospl_path = path+"/"+KEY_PREFIX+KEY_POSPL;
@@ -225,6 +273,7 @@ struct collection {
                 cum_sum += C[i];
             }
             file_map[KEY_POSPL] = pospl_path;
+            LOG(INFO) << "DONE";
         }
         if (file_map.count(KEY_D) == 0) {
             auto docpl_path = path+"/"+KEY_PREFIX+KEY_D;
@@ -239,6 +288,7 @@ struct collection {
                 D[i] = doc_border_rank(SA[i]);
             }
             file_map[KEY_D] = docpl_path;
+            LOG(INFO) << "DONE";
         }
     }
 };

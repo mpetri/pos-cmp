@@ -106,7 +106,7 @@ struct bit_ostream {
             auto needed_bits = tellp()+n;
             if (needed_bits >= cur_size) {
                 auto size = std::max(cur_size*2,needed_bits);
-                resize(size);
+                resize(64+size); // always have one extra 64bit word
             }
         }
 

@@ -3,6 +3,77 @@
 #include <iterator>
 
 template<class t_itr>
+struct skip_iterator : public std::iterator<std::random_access_iterator_tag,uint64_t,std::ptrdiff_t> {
+    using size_type = sdsl::int_vector<>::size_type;
+    t_itr m_itr;
+    t_itr m_end;
+    size_type m_skip;
+    skip_iterator(t_itr itr,t_itr end,size_type skip) : m_itr(itr), m_end(end), m_skip(skip) {}
+    skip_iterator& operator++()
+    {
+        m_itr += m_skip;
+        return *this;
+    }
+    skip_iterator& operator--()
+    {
+        m_itr -= m_skip;
+        return *this;
+    }
+    uint64_t operator*() const
+    {
+        return *m_itr;
+    }
+    bool operator ==(const skip_iterator& b) const
+    {
+        return m_itr == b.m_itr;
+    }
+    bool operator !=(const skip_iterator& b) const
+    {
+        return m_itr != b.m_itr;
+    }
+    skip_iterator& operator+=(size_type i)
+    {
+        m_itr += (i*m_skip);
+        return *this;
+    }
+    skip_iterator& operator-=(size_type i)
+    {
+        m_itr -= (i*m_skip);
+        return *this;
+    }
+    skip_iterator operator+(size_type i)
+    {
+        skip_iterator tmp(*this);
+        tmp += i;
+        return tmp;
+    }
+    skip_iterator operator-(size_type i)
+    {
+        skip_iterator tmp(*this);
+        tmp -= i;
+        return tmp;
+    }
+    auto operator-(const skip_iterator& b) const -> difference_type
+    {
+        difference_type dist = 0;
+        if (m_itr < b.m_itr) {
+            auto tmp = *this;
+            while (tmp != b) {
+                ++tmp;
+                dist--;
+            }
+        } else {
+            auto tmp = b;
+            while (tmp != *this) {
+                ++tmp;
+                dist++;
+            }
+        }
+        return dist;
+    }
+};
+
+template<class t_itr>
 struct id_range_adaptor_itr : public std::iterator<std::random_access_iterator_tag,uint64_t,std::ptrdiff_t> {
     using size_type = sdsl::int_vector<>::size_type;
     t_itr m_itr;
