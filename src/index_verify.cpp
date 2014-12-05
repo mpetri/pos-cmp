@@ -201,11 +201,6 @@ int main(int argc,const char* argv[])
         index_nextword<eliasfano_list<true>,invidx_type> index(col);
         verify_nextword_index(index,col);
     }
-    {
-        using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
-        index_nextword<optpfor_list<128,true>,invidx_type> index(col);
-        verify_nextword_index(index,col);
-    }
 
 
     return 0;

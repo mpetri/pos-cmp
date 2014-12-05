@@ -55,7 +55,7 @@ struct elias_gamma {
     {
         uint64_t x;
         auto len = is.get_unary();
-        x = 1 << len;
+        x = 1ULL << len;
         if (len) x |= is.get_int(len);
         return x;
     }
