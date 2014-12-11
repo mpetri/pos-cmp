@@ -38,6 +38,8 @@ class index_invidx
         sdsl::bit_vector m_freq_data;
         rank_type m_ranker;
         doc_perm m_dp;
+        bit_istream m_isi;
+        bit_istream m_isf;
     private:
         template<class t_itr,class t_fitr>
         wand_metadata create_wand_data(t_itr ibegin,t_itr iend,t_fitr fbegin,t_fitr fend)
@@ -60,7 +62,7 @@ class index_invidx
             return wm;
         }
     public:
-        index_invidx(collection& col)
+        index_invidx(collection& col) : m_isi(m_id_data), m_isf(m_freq_data)
         {
             file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this)+".idx";
             if (utils::file_exists(file_name)) {  // load
@@ -106,6 +108,9 @@ class index_invidx
                     LOG(INFO) << "Number of terms: " << C.size()-2;
                     LOG(INFO) << "Number of postings: " << csum - C[0] + C[1];
                 }
+                // prepare input streams
+                m_isi.refresh(); m_isf.refresh();
+
                 LOG(INFO) << "STORE to file '" << file_name << "'";
                 std::ofstream ofs(file_name);
                 auto bytes = serialize(ofs);
@@ -150,14 +155,14 @@ class index_invidx
             ifs.read((char*)m_meta_data.data(),m_num_lists*sizeof(list_metadata));
             m_id_data.load(ifs);
             m_freq_data.load(ifs);
+            m_isi.refresh();
+            m_isf.refresh();
         }
         std::pair<typename id_list_type::list_type,typename freq_list_type::list_type>
         list(size_t i) const
         {
-            bit_istream isi(m_id_data);
-            bit_istream isf(m_freq_data);
-            return make_pair(id_list_type::materialize(isi,m_meta_data[i].id_offset),
-                             freq_list_type::materialize(isf,m_meta_data[i].freq_offset)
+            return make_pair(id_list_type::materialize(m_isi,m_meta_data[i].id_offset),
+                             freq_list_type::materialize(m_isf,m_meta_data[i].freq_offset)
                             );
         }
 };

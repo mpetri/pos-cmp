@@ -176,6 +176,11 @@ struct bit_istream {
             m_bv(bv),
             data_ptr(bv.data()+(start_offset>>6)),
             in_word_offset(start_offset%64) {}
+        explicit bit_istream(const bit_istream& is)
+            : m_bv(is.m_bv),data_ptr(is.data_ptr),in_word_offset(is.in_word_offset)
+        {
+
+        }
         // get a bit
         value_type get() const
         {
@@ -286,6 +291,11 @@ struct bit_istream {
         {
             return data_ptr;
         }
+        void refresh() const
+        {
+            seek(0);
+        }
+
     private:
         const sdsl::bit_vector& m_bv;
         mutable const uint64_t* data_ptr = nullptr;

@@ -80,6 +80,7 @@ int verify_index(t_idx& index,collection& col)
             // check ids
             auto last = std::unique(tmp.begin(),tmp.end());
             auto un = std::distance(tmp.begin(),last);
+
             auto curid = tmp.begin();
             auto itmp = id_list.begin();
             auto iend = id_list.end();
@@ -90,13 +91,15 @@ int verify_index(t_idx& index,collection& col)
                 LOG_N_TIMES(5,ERROR) << "ERROR IN FREQ SIZE of id <" << i << ">";
                 continue;
             }
+            size_t offset = 0;
             while (itmp != iend) {
                 if (*itmp != *curid) {
-                    LOG_N_TIMES(5,ERROR) << "ERROR IN IDS OF id <" << i << ">";
+                    LOG_N_TIMES(5,ERROR) << "ERROR IN IDS OF id <" << i << "> at offset="<<offset<< " : should be: '" << *curid << " is '" << *itmp << "'";
                     return -1;
                 }
                 ++curid;
                 ++itmp;
+                offset++;
             }
             csum += n;
         }
@@ -121,6 +124,7 @@ int verify_index(t_idx& index,collection& col)
             auto curid = begin;
             auto itmp = list.begin();
             auto iend = list.end();
+
             if ((size_t)un != itmp.size()) {
                 LOG(ERROR) << "ERROR IN IDS SIZE of id <" << i << ">: " << un << " - " << itmp.size();
                 return -1;
@@ -186,20 +190,25 @@ int main(int argc,const char* argv[])
     collection col(args.collection_dir);
 
     /* create index */
+    // {
+    //     using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
+    //     index_abspos<eliasfano_list<true>,invidx_type> index(col);
+    //     verify_index(index,col);
+    // }
+    // {
+    //     using invidx_type = index_invidx<eliasfano_list<true>,optpfor_list<128,false>>;
+    //     index_abspos<eliasfano_list<true>,invidx_type> index(col);
+    //     verify_index(index,col);
+    // }
+    // {
+    //     using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
+    //     index_nextword<eliasfano_list<true>,invidx_type> index(col);
+    //     verify_nextword_index(index,col);
+    // }
     {
-        using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
-        index_abspos<eliasfano_list<true>,invidx_type> index(col);
+        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+        index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
         verify_index(index,col);
-    }
-    {
-        using invidx_type = index_invidx<eliasfano_list<true>,optpfor_list<128,false>>;
-        index_abspos<eliasfano_list<true>,invidx_type> index(col);
-        verify_index(index,col);
-    }
-    {
-        using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
-        index_nextword<eliasfano_list<true>,invidx_type> index(col);
-        verify_nextword_index(index,col);
     }
 
 

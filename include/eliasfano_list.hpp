@@ -14,11 +14,11 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
     public:
         using size_type = sdsl::int_vector<>::size_type;
     private:
-        uint64_t m_size;
-        uint64_t m_universe;
-        uint8_t m_width_low;
-        uint64_t m_low_offset;
-        uint64_t m_high_offset;
+        uint64_t m_size = 0;
+        uint64_t m_universe = 0;
+        uint8_t m_width_low = 0;
+        uint64_t m_low_offset = 0;
+        uint64_t m_high_offset = 0;
         const uint64_t* m_data;
     private:
         mutable value_type m_cur_elem = 0;
@@ -47,6 +47,9 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
                     m_cur_high_offset = sdsl::bits::next(m_data,m_high_offset+1) - m_high_offset;
                 }
             }
+            size_t cur_bucket = m_cur_high_offset - m_cur_offset;
+            m_cur_elem = (cur_bucket << m_width_low) | low(m_cur_offset);
+            m_last_accessed_offset = m_cur_offset;
         }
         ef_iterator(const bit_istream& is,size_t start_offset,bool end,size_type size,size_type universe)
             : m_size(size) , m_universe(universe)
@@ -67,8 +70,11 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
                     m_cur_high_offset = sdsl::bits::next(m_data,m_high_offset+1) - m_high_offset;
                 }
             }
+            size_t cur_bucket = m_cur_high_offset - m_cur_offset;
+            m_cur_elem = (cur_bucket << m_width_low) | low(m_cur_offset);
+            m_last_accessed_offset = m_cur_offset;
         }
-        ef_iterator() = delete;
+        ef_iterator() = default;
         ef_iterator(const ef_iterator& pi) = default;
         ef_iterator(ef_iterator&& pi) = default;
         ef_iterator& operator=(const ef_iterator& pi) = default;
@@ -151,6 +157,13 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
             tmp += i;
             return tmp;
         }
+        ef_iterator& operator--()
+        {
+            size_type offset = m_high_offset + m_cur_high_offset;
+            m_cur_high_offset = sdsl::bits::prev(m_data,offset-1) - m_high_offset;
+            m_cur_offset--;
+            return *this;
+        }
         template<class t_itr>
         auto operator-(const t_itr& b) const -> difference_type
         {
@@ -160,7 +173,8 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
         {
             static_assert(t_sorted == true,"skipping only works in sorted lists.");
             if (m_cur_elem == pos) return true;
-            if (m_universe <= pos) {
+            if (m_cur_elem > pos) return false;
+            if (m_universe < pos) {
                 m_cur_offset = m_size;
                 return false;
             }
@@ -210,16 +224,16 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
     private:
         inline value_type low(size_type i) const
         {
-            const auto offset = m_low_offset + i*m_width_low;
-            const auto data_ptr = m_data + (offset>>6);
-            const auto in_word_offset = offset&0x3F;
+            const auto off = m_low_offset + i*m_width_low;
+            const auto data_ptr = m_data + (off>>6);
+            const auto in_word_offset = off&0x3F;
             return sdsl::bits::read_int(data_ptr,in_word_offset,m_width_low);
         }
         inline value_type high(size_type i) const
         {
-            const auto offset = m_high_offset + i;
-            const auto data_ptr = m_data + (offset>>6);
-            const auto in_word_offset = offset&0x3F;
+            const auto off = m_high_offset + i;
+            const auto data_ptr = m_data + (off>>6);
+            const auto in_word_offset = off&0x3F;
             return sdsl::bits::read_int(data_ptr,in_word_offset,1);
         }
 };
@@ -231,17 +245,18 @@ struct eliasfano_list {
     using list_type = list_dummy<iterator_type>;
 
     template<class t_itr>
-    static size_type create(bit_ostream& os,t_itr begin,t_itr end)
+    static size_type create(bit_ostream& os,t_itr begin,t_itr end,size_type m = 0,size_type u = 0)
     {
         size_type data_offset = os.tellp();
 
         // compute properties
-        uint64_t m = std::distance(begin,end);
-        uint64_t u;
-        if (!t_sorted) {
-            u = std::accumulate(begin,end, 0)+1;
-        } else {
-            u = *(end-1)+1;
+        if (m == 0) m = std::distance(begin,end);
+        if (u == 0) {
+            if (!t_sorted) {
+                u = std::accumulate(begin,end, 0)+1;
+            } else {
+                u = *(end-1)+1;
+            }
         }
         uint8_t logm = sdsl::bits::hi(m)+1;
         uint8_t logu = sdsl::bits::hi(u)+1;
@@ -269,7 +284,7 @@ struct eliasfano_list {
 
         // write high
         size_type num_zeros = (u >> width_low);
-        os.expand_if_needed(num_zeros+m);
+        os.expand_if_needed(num_zeros+m+1);
         itr = begin;
         size_type last_high=0;
         last = 0;
@@ -292,6 +307,11 @@ struct eliasfano_list {
     static list_dummy<iterator_type> materialize(const bit_istream& is,size_t start_offset)
     {
         return list_dummy<iterator_type>(iterator_type(is,start_offset,false),iterator_type(is,start_offset,true));
+    }
+
+    static list_dummy<iterator_type> materialize(const bit_istream& is,size_t start_offset,size_type m,size_type u)
+    {
+        return list_dummy<iterator_type>(iterator_type(is,start_offset,false,m,u),iterator_type(is,start_offset,true,m,u));
     }
 
     static size_type estimate_size(size_type m,size_type u)

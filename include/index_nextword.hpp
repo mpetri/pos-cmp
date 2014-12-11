@@ -27,9 +27,11 @@ class index_nextword
         sdsl::bit_vector m_data;
         sdsl::sd_vector<> m_mapper;
         sdsl::rank_support_sd<> m_mapper_access;
+        doc_pos_mapper m_dpm;
         uint64_t m_sym_width;
+        bit_istream m_is;
     public:
-        index_nextword(collection& col) : m_docidx(col)
+        index_nextword(collection& col) : m_docidx(col), m_is(m_data)
         {
             file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this)+".idx";
             if (utils::file_exists(file_name)) {  // load
@@ -39,26 +41,29 @@ class index_nextword
             } else { // construct
                 // (2) pos index
                 LOG(INFO) << "CONSTRUCT abs nextword index";
-                bit_ostream bvo(m_data);
-                sdsl::int_vector_mapper<> text(col.file_map[KEY_TEXT]);
-                sdsl::int_vector_mapper<> SA(col.file_map[KEY_SA]);
-                sdsl::int_vector_mapper<> SCC(col.file_map[KEY_SCC]);
-                sdsl::int_vector_mapper<> CC(col.file_map[KEY_CC]);
-                sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
-                m_num_lists = CC.size();
                 std::vector<uint64_t> meta_data(m_num_lists);
-                size_t csum = 1; // skip 0
-                m_sym_width = text.width();
-                for (size_t i=0; i<CC.size(); i++) {
-                    size_t n = SCC[i];
-                    auto begin = SA.begin()+csum;
-                    auto end = begin + n;
-                    LOG_EVERY_N(250000, INFO) << "Construct nextword list " << i << " (" << n << ")";
-                    std::vector<uint64_t> tmp(begin,end);
-                    std::sort(tmp.begin(),tmp.end());
-                    meta_data[i] = plist_type::create(bvo,tmp.begin(),tmp.end());
-                    csum += n;
+                sdsl::int_vector_mapper<> CC(col.file_map[KEY_CC]);
+                {
+                    bit_ostream bvo(m_data);
+                    sdsl::int_vector_mapper<> text(col.file_map[KEY_TEXT]);
+                    sdsl::int_vector_mapper<> SA(col.file_map[KEY_SA]);
+                    sdsl::int_vector_mapper<> SCC(col.file_map[KEY_SCC]);
+                    sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
+                    m_num_lists = CC.size();
+                    size_t csum = 1; // skip 0
+                    m_sym_width = text.width();
+                    for (size_t i=0; i<CC.size(); i++) {
+                        size_t n = SCC[i];
+                        auto begin = SA.begin()+csum;
+                        auto end = begin + n;
+                        LOG_EVERY_N(250000, INFO) << "Construct nextword list " << i << " (" << n << ")";
+                        std::vector<uint64_t> tmp(begin,end);
+                        std::sort(tmp.begin(),tmp.end());
+                        meta_data[i] = plist_type::create(bvo,tmp.begin(),tmp.end());
+                        csum += n;
+                    }
                 }
+                m_is.refresh(); // init input stream
 
                 m_meta_data = sdsl::sd_vector<>(meta_data.begin(),meta_data.end());
                 m_meta_data_access.set_vector(&m_meta_data);
@@ -67,7 +72,10 @@ class index_nextword
                 m_mapper = sdsl::sd_vector<>(CC.begin(),CC.end());
                 m_mapper_access.set_vector(&m_mapper);
 
-                // (4) write
+                // (4) create doc pos mapper
+                m_dpm = doc_pos_mapper(col);
+
+                // (5) write
                 LOG(INFO) << "STORE to file '" << file_name << "'";
                 std::ofstream ofs(file_name);
                 auto bytes = serialize(ofs);
@@ -85,6 +93,7 @@ class index_nextword
             written_bytes += m_meta_data.serialize(out,child,"list metadata");
             written_bytes += m_mapper.serialize(out,child,"phrase mapper");
             written_bytes += m_data.serialize(out,child,"list data");
+            written_bytes += m_dpm.serialize(out,child,"doc pos mapper");
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
@@ -97,6 +106,8 @@ class index_nextword
             m_mapper.load(ifs);
             m_mapper_access.set_vector(&m_mapper);
             m_data.load(ifs);
+            m_dpm.load(ifs);
+            m_is.refresh(); // init input stream
         }
         bool exists(uint64_t id1,uint64_t id2) const
         {
@@ -116,10 +127,9 @@ class index_nextword
         typename plist_type::list_type
         list(uint64_t id) const
         {
-            bit_istream is(m_data);
             auto list_number = m_mapper_access(id);
             auto data_offset = m_meta_data_access(list_number+1);
-            return plist_type::materialize(is,data_offset);
+            return plist_type::materialize(m_is,data_offset);
         }
         typename doclist_type::list_type
         doc_list(size_t i) const
@@ -134,5 +144,41 @@ class index_nextword
                 lists.emplace_back(doc_list(id));
             }
             return lists;
+        }
+        intersection_result
+        phrase_list(std::vector<uint64_t> ids)
+        {
+            if (ids.size() == 2) {
+                return map_to_doc_ids(list(ids[0],ids[1]));
+            }
+            std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
+            for (size_t i=0; i<ids.size(); i+=2) {
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(list(ids[i],ids[i+1]),i));
+            }
+            auto res = pos_intersect(lists);
+            return map_to_doc_ids(res);
+        }
+        template<class t_list>
+        intersection_result
+        map_to_doc_ids(const t_list& list)
+        {
+            intersection_result res(list.size());
+            auto itr = list.begin();
+            auto end = list.end();
+            auto prev_docid = m_dpm.map_to_id(*itr);
+            ++itr;
+            size_t n=0;
+            while (itr != end) {
+                auto pos = *itr;
+                auto doc_id = m_dpm.map_to_id(pos);
+                if (doc_id != prev_docid) {
+                    res[n++] = prev_docid;
+                    prev_docid = doc_id;
+                }
+                ++itr;
+            }
+            res[n++] = prev_docid;
+            res.resize(n);
+            return res;
         }
 };

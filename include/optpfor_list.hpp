@@ -245,7 +245,7 @@ struct optpfor_list {
             // reserve meta data first
             os.expand_if_needed((2*num_blocks*32)+(num_blocks*t_block_size*32)); // overestimate space required
             os.align64();
-            uint32_t* meta_data = reinterpret_cast<uint32_t*>(os.cur_data());
+            auto meta_data_start_offset = os.tellp()>>5;
             if (t_sorted) { // need more space for skip data
                 os.skip(num_blocks*32*2);
             } else {
@@ -261,6 +261,7 @@ struct optpfor_list {
             auto itr = begin;
             tmp_data[0] = 0;
             for (size_t i=0; i<num_blocks; i++) {
+                uint32_t* meta_data = reinterpret_cast<uint32_t*>(os.data())+meta_data_start_offset;
                 if (i!=0) tmp_data[0] = meta_data[num_blocks+i-1];
                 meta_data[i] = block_start;
                 size_t n = std::min((size_t)t_block_size,size-(t_block_size*i));

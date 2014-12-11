@@ -3,8 +3,7 @@
 #include "sdsl/int_vector.hpp"
 #include "bit_streams.hpp"
 #include "bit_coders.hpp"
-#include "eliasfano_list.hpp"
-#include "optpfor_list.hpp"
+#include "list_types.hpp"
 #include "intersection.hpp"
 
 #include <functional>
@@ -453,6 +452,41 @@ TEST(eliasfano, iterate)
                 ASSERT_EQ(*begin,A[i]);
                 i++;
                 ++begin;
+            }
+        }
+    }
+}
+
+TEST(eliasfano, backward_iterate)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = dis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+        size_t ln = std::distance(A.begin(),last);
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = eliasfano_list<true>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+        {
+            bit_istream is(bv);
+            auto list = eliasfano_list<true>::materialize(is,0);
+            auto begin = list.begin();
+            ASSERT_EQ(begin.size(),ln);
+
+            auto itr = begin+20;
+            for (size_t i=0; i<20; i++) {
+                ASSERT_EQ(*itr,A[20-i]);
+                --itr;
             }
         }
     }
@@ -1227,6 +1261,548 @@ TEST(intersection, multiple)
         }
     }
 }
+
+TEST(pos_intersection, simple)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 100);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+        size_t ln = std::distance(A.begin(),last);
+        std::vector<uint32_t> B(ln);
+        std::copy(A.begin(),last,B.begin());
+        for (size_t j=0; j<ln; j++) B[j] = B[j]+1;
+
+        sdsl::bit_vector bv;
+        size_t offsetA,offsetB;
+        {
+            bit_ostream os(bv);
+            offsetA = eliasfano_list<true>::create(os,A.begin(),last);
+            offsetB = eliasfano_list<true>::create(os,B.begin(),B.end());
+        }
+        {
+            bit_istream is(bv);
+            auto listA = eliasfano_list<true>::materialize(is,offsetA);
+            auto listB = eliasfano_list<true>::materialize(is,offsetB);
+
+            offset_proxy_list<eliasfano_list<true>::list_type> offA(listA,0);
+            offset_proxy_list<eliasfano_list<true>::list_type> offB(listB,1);
+
+            std::vector<offset_proxy_list<eliasfano_list<true>::list_type>> lists {offA,offB};
+            auto res = pos_intersect(lists);
+
+            std::vector<uint32_t> ires;
+            std::set_intersection(A.begin(),last,A.begin(),last,std::back_inserter(ires));
+            ASSERT_EQ(ires.size(),res.size());
+            for (size_t i=0; i<ires.size(); i++) ASSERT_EQ(ires[i],res[i]);
+        }
+    }
+}
+
+TEST(pos_intersection, mixed)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 10000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 1000);
+    std::uniform_int_distribution<uint64_t> rdis(1, 100);
+    std::uniform_int_distribution<uint64_t> ndis(2, 10);
+
+    for (size_t i=0; i<n; i++) {
+        // generate result
+        size_t rlen = rdis(gen);
+        std::vector<uint32_t> res(rlen);
+        for (size_t j=0; j<rlen; j++) res[j] = dis(gen);
+        std::sort(res.begin(),res.end());
+        auto rlast = std::unique(res.begin(),res.end());
+        auto num_res = std::distance(res.begin(),rlast);
+
+
+        // generate lists and insert more integers
+        std::vector<uint32_t> ires;
+        std::vector<uint64_t> list_offsets;
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto nlists = ndis(gen);
+            for (size_t j=0; j<nlists; j++) {
+                auto list_len = ldis(gen);
+                std::vector<uint32_t> L(list_len+rlen);
+                std::copy(res.begin(),rlast,L.begin());
+                for (size_t x=num_res; x<L.size(); x++) L[x] = dis(gen);
+                std::sort(L.begin(),L.end());
+                auto llast = std::unique(L.begin(),L.end());
+                if (ires.size() == 0) ires = std::vector<uint32_t>(L.begin(),llast);
+                std::vector<uint32_t> iires;
+                std::set_intersection(ires.begin(),ires.end(),L.begin(),llast,std::back_inserter(iires));
+                ires = iires;
+                for (size_t x=0; x<L.size(); x++) L[x] = L[x] + j;
+                auto Loffset = eliasfano_list<true>::create(os,L.begin(),llast);
+                list_offsets.push_back(Loffset);
+            }
+        }
+        {
+            bit_istream is(bv);
+            std::vector<offset_proxy_list<eliasfano_list<true>::list_type>> lists;
+            for (size_t j=0; j<list_offsets.size(); j++) {
+                auto list = eliasfano_list<true>::materialize(is,list_offsets[j]);
+                offset_proxy_list<eliasfano_list<true>::list_type> offL(list,j);
+                lists.push_back(offL);
+            }
+
+            auto result = pos_intersect(lists);
+            ASSERT_EQ(ires.size(),result.size());
+            for (size_t i=0; i<ires.size(); i++) ASSERT_EQ(ires[i],result[i]);
+        }
+    }
+}
+
+
+TEST(bvlist, iterate)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = dis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+        size_t ln = std::distance(A.begin(),last);
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = bitvector_list<>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+        {
+            bit_istream is(bv);
+            auto list = bitvector_list<>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
+            ASSERT_EQ(begin.size(),ln);
+
+            size_t i = 0;
+            while (begin != end) {
+                ASSERT_EQ(*begin,A[i]);
+                i++;
+                ++begin;
+            }
+        }
+    }
+}
+
+TEST(bvlist, iterate_skip)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = dis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+        size_t ln = std::distance(A.begin(),last);
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = bitvector_list<>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+        {
+            bit_istream is(bv);
+            auto list = bitvector_list<>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
+            ASSERT_EQ(begin.size(),ln);
+
+            size_t i = 0;
+            auto tmp = begin;
+            while (begin != end) {
+                ASSERT_EQ(*begin,A[i]);
+                i += 5;
+                tmp = begin;
+                begin += 5;
+                if (i >= begin.size()) break;
+            }
+        }
+    }
+}
+
+TEST(bvlist, skip_asign)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = dis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+        size_t ln = std::distance(A.begin(),last);
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = bitvector_list<>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+        {
+            bit_istream is(bv);
+            auto list = bitvector_list<>::materialize(is,0);
+            auto begin = list.begin();
+            ASSERT_EQ(begin.size(),ln);
+            for (size_t i=5; i<ln; i+=5) {
+                ASSERT_EQ(*(begin+i),A[i]);
+            }
+        }
+    }
+}
+
+TEST(bvlist, intersection)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 10000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        size_t len2 = ldis(gen);
+        std::vector<uint32_t> B(len2);
+        for (size_t j=0; j<len2; j++) B[j] = dis(gen);
+        std::sort(B.begin(),B.end());
+        auto lastB = std::unique(B.begin(),B.end());
+
+        sdsl::bit_vector bv;
+        size_t offsetA,offsetB;
+        {
+            bit_ostream os(bv);
+            offsetA = bitvector_list<>::create(os,A.begin(),last);
+            offsetB = bitvector_list<>::create(os,B.begin(),lastB);
+        }
+        {
+            bit_istream is(bv);
+            auto listA = bitvector_list<>::materialize(is,offsetA);
+            auto listB = bitvector_list<>::materialize(is,offsetB);
+            auto res = intersect(listA,listB);
+
+            std::vector<uint32_t> ires;
+            std::set_intersection(A.begin(),A.end(),B.begin(),B.end(),std::back_inserter(ires));
+            ASSERT_EQ(ires.size(),res.size());
+            for (size_t i=0; i<ires.size(); i++) ASSERT_EQ(ires[i],res[i]);
+        }
+    }
+}
+
+TEST(uniform_eliasfano, small_lists_iterate)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 128);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+        size_t ln = std::distance(A.begin(),last);
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = uniform_eliasfano_list<>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+        {
+            bit_istream is(bv);
+            auto list = uniform_eliasfano_list<>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
+            ASSERT_EQ(begin.size(),ln);
+
+            size_t i = 0;
+            while (begin != end) {
+                ASSERT_EQ(*begin,A[i]);
+                i++;
+                ++begin;
+            }
+        }
+    }
+}
+
+TEST(uniform_eliasfano, iterate)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = dis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+        size_t ln = std::distance(A.begin(),last);
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = uniform_eliasfano_list<>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+        {
+            bit_istream is(bv);
+            auto list = uniform_eliasfano_list<>::materialize(is,0);
+            auto begin = list.begin();
+            auto end = list.end();
+            ASSERT_EQ(begin.size(),ln);
+
+            size_t i = 0;
+            while (begin != end) {
+                ASSERT_EQ(*begin,A[i]);
+                i++;
+                ++begin;
+            }
+        }
+    }
+}
+
+TEST(uniform_eliasfano, skip_asign)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = dis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+        size_t ln = std::distance(A.begin(),last);
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = uniform_eliasfano_list<>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+        {
+            bit_istream is(bv);
+            auto list = uniform_eliasfano_list<>::materialize(is,0);
+            auto begin = list.begin();
+            ASSERT_EQ(begin.size(),ln);
+            for (size_t i=5; i<ln; i+=5) {
+                ASSERT_EQ(*(begin+i),A[i]);
+            }
+        }
+    }
+}
+
+TEST(uniform_eliasfano, intersection)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 10000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        size_t len2 = ldis(gen);
+        std::vector<uint32_t> B(len2);
+        for (size_t j=0; j<len2; j++) B[j] = dis(gen);
+        std::sort(B.begin(),B.end());
+        auto lastB = std::unique(B.begin(),B.end());
+
+        sdsl::bit_vector bv;
+        size_t offsetA,offsetB;
+        {
+            bit_ostream os(bv);
+            offsetA = uniform_eliasfano_list<>::create(os,A.begin(),last);
+            offsetB = uniform_eliasfano_list<>::create(os,B.begin(),lastB);
+        }
+        {
+            bit_istream is(bv);
+            auto listA = uniform_eliasfano_list<>::materialize(is,offsetA);
+            auto listB = uniform_eliasfano_list<>::materialize(is,offsetB);
+            auto res = intersect(listA,listB);
+
+            std::vector<uint32_t> ires;
+            std::set_intersection(A.begin(),A.end(),B.begin(),B.end(),std::back_inserter(ires));
+            ASSERT_EQ(ires.size(),res.size());
+            for (size_t i=0; i<ires.size(); i++) ASSERT_EQ(ires[i],res[i]);
+        }
+    }
+}
+
+
+TEST(uniform_eliasfano, skip_rand_exist)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = dis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = uniform_eliasfano_list<128>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+
+        {
+            bit_istream is(bv);
+            auto list = uniform_eliasfano_list<128>::materialize(is,0);
+            auto itr = list.begin();
+            size_t ln = std::distance(A.begin(),last);
+            for (size_t j=dis(gen)%255; j<ln; j+=(dis(gen)%255)) {
+                ASSERT_TRUE(itr.skip(A[j]));
+                ASSERT_EQ(*itr,A[j]);
+            }
+        }
+    }
+}
+
+TEST(uniform_eliasfano, skip_rand_oneoff)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = dis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = uniform_eliasfano_list<128>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+
+        {
+            bit_istream is(bv);
+            auto list = uniform_eliasfano_list<128>::materialize(is,0);
+            auto itr = list.begin();
+            size_t ln = std::distance(A.begin(),last);
+            for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
+                if (A[j-1] == A[j]-1) continue;
+                ASSERT_FALSE(itr.skip(A[j]-1));
+                ASSERT_EQ(*itr,A[j]);
+            }
+        }
+    }
+}
+
+TEST(uniform_eliasfano, skip_rand_largegaps)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 100000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 100);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = uniform_eliasfano_list<128>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+
+        {
+            bit_istream is(bv);
+            auto list = uniform_eliasfano_list<128>::materialize(is,0);
+            auto itr = list.begin();
+            size_t ln = std::distance(A.begin(),last);
+            for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
+                if (A[j-1] == A[j]-1) continue;
+                ASSERT_FALSE(itr.skip(A[j]-1));
+                ASSERT_EQ(*itr,A[j]);
+            }
+        }
+    }
+}
+
+TEST(uniform_eliasfano, skip_rand_largegaps_hit)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 1000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+
+        sdsl::bit_vector bv;
+        {
+            bit_ostream os(bv);
+            auto offset = uniform_eliasfano_list<128>::create(os,A.begin(),last);
+            ASSERT_EQ(offset,0ULL);
+        }
+
+        {
+            bit_istream is(bv);
+            auto list = uniform_eliasfano_list<128>::materialize(is,0);
+            auto itr = list.begin();
+            size_t ln = std::distance(A.begin(),last);
+            for (size_t j=1+dis(gen)%255; j<ln; j+=(dis(gen)%25)) {
+                ASSERT_TRUE(itr.skip(A[j]));
+                ASSERT_EQ(*itr,A[j]);
+            }
+        }
+    }
+}
+
+
+
 
 int main(int argc, char* argv[])
 {

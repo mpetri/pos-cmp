@@ -2,6 +2,7 @@
 
 #include "list_types.hpp"
 #include "index_invidx.hpp"
+#include "doc_pos_mapper.hpp"
 
 #include "easylogging++.h"
 
@@ -25,8 +26,10 @@ class index_abspos
         size_t m_num_lists;
         std::vector<abs_metadata> m_meta_data;
         sdsl::bit_vector m_data;
+        doc_pos_mapper m_dpm;
+        bit_istream m_is;
     public:
-        index_abspos(collection& col) : m_docidx(col)
+        index_abspos(collection& col) : m_docidx(col), m_is(m_data)
         {
             file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this)+".idx";
             if (utils::file_exists(file_name)) {  // load
@@ -51,7 +54,13 @@ class index_abspos
                         m_meta_data[i].offset = plist_type::create(bvo,begin,end);
                         csum += n;
                     }
+                    // prepare input stream
+                    m_is.refresh();
                 }
+
+                // (3) create doc pos mapper
+                m_dpm = doc_pos_mapper(col);
+
                 LOG(INFO) << "STORE to file '" << file_name << "'";
                 std::ofstream ofs(file_name);
                 auto bytes = serialize(ofs);
@@ -73,6 +82,7 @@ class index_abspos
             sdsl::structure_tree::add_size(listdata, m_meta_data.size()*sizeof(abs_metadata));
 
             written_bytes += m_data.serialize(out,child,"list data");
+            written_bytes += m_dpm.serialize(out,child,"doc pos mapper");
             sdsl::structure_tree::add_size(child, written_bytes);
             return written_bytes;
         }
@@ -82,12 +92,12 @@ class index_abspos
             m_meta_data.resize(m_num_lists);
             ifs.read((char*)m_meta_data.data(),m_num_lists*sizeof(abs_metadata));
             m_data.load(ifs);
+            m_dpm.load(ifs);
         }
         typename plist_type::list_type
         list(size_t i) const
         {
-            bit_istream is(m_data);
-            return plist_type::materialize(is,m_meta_data[i].offset);
+            return plist_type::materialize(m_is,m_meta_data[i].offset);
         }
         typename doclist_type::list_type
         doc_list(size_t i) const
@@ -102,5 +112,38 @@ class index_abspos
                 lists.emplace_back(doc_list(id));
             }
             return lists;
+        }
+        intersection_result
+        phrase_list(std::vector<uint64_t> ids)
+        {
+            std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
+            size_type i = 0;
+            for (const auto& id : ids) {
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(list(id),i++));
+            }
+            return map_to_doc_ids(pos_intersect(lists));
+        }
+        template<class t_list>
+        intersection_result
+        map_to_doc_ids(const t_list& list)
+        {
+            intersection_result res(list.size());
+            auto itr = list.begin();
+            auto end = list.end();
+            auto prev_docid = m_dpm.map_to_id(*itr);
+            ++itr;
+            size_t n=0;
+            while (itr != end) {
+                auto pos = *itr;
+                auto doc_id = m_dpm.map_to_id(pos);
+                if (doc_id != prev_docid) {
+                    res[n++] = prev_docid;
+                    prev_docid = doc_id;
+                }
+                ++itr;
+            }
+            res[n++] = prev_docid;
+            res.resize(n);
+            return res;
         }
 };

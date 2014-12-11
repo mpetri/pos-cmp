@@ -7,6 +7,7 @@
 template<class t_itr>
 struct list_dummy {
     using size_type = sdsl::int_vector<>::size_type;
+    using const_iterator = t_itr;
     t_itr m_begin;
     t_itr m_end;
     size_type m_size;
@@ -27,7 +28,7 @@ struct list_dummy {
     {
         return m_size;
     }
-    bool operator<(const list_dummy<t_itr> b) const
+    bool operator<(const list_dummy<t_itr>& b) const
     {
         return size() < b.size();
     }
@@ -108,6 +109,7 @@ struct intersection_res_itr : public std::iterator<std::random_access_iterator_t
 struct intersection_result {
     using size_type = sdsl::int_vector<>::size_type;
     sdsl::int_vector<64> m_data;
+    int64_t offset = 0;
     intersection_result(size_type s) : m_data(s) {}
     void resize(size_type s)
     {
@@ -128,5 +130,35 @@ struct intersection_result {
     size_type size() const
     {
         return m_data.size();
+    }
+};
+
+
+template<class t_list>
+struct offset_proxy_list {
+    using size_type = typename t_list::size_type;
+    using list_type = t_list;
+    list_type m_list;
+    uint64_t m_offset = 0;
+    offset_proxy_list(list_type& l,size_type off) : m_list(l), m_offset(off) {}
+    void resize(size_type s)
+    {
+        m_list.resize(s);
+    }
+    typename list_type::const_iterator begin() const
+    {
+        return m_list.begin();
+    }
+    typename list_type::const_iterator end() const
+    {
+        return m_list.end();
+    }
+    int64_t offset() const
+    {
+        return (int64_t) m_offset;
+    }
+    bool operator<(const offset_proxy_list& b) const
+    {
+        return m_list.size() < b.m_list.size();
     }
 };
