@@ -62,7 +62,7 @@ int main(int argc,const char* argv[])
         index_abspos<optpfor_list<128,true>,invidx_type> index(col);
     }
     {
-        index_nextword<optpfor_list<128,true>,invidx_type> index(col);
+        index_relpos<optpfor_list<128,false>,invidx_type> index(col);
     }
 
     return 0;

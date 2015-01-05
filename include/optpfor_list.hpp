@@ -41,6 +41,7 @@ class optpfor_iterator : public std::iterator<std::random_access_iterator_tag,ui
             m_size = is.decode<coder::elias_gamma>();
             if (!t_sorted) {
                 m_min_offset = is.decode<coder::elias_gamma>();
+                m_min_offset--;
             }
 
             if (m_size <= t_block_size) {
@@ -224,7 +225,7 @@ struct optpfor_list {
         if (!t_sorted) {
             auto min_elem = std::min_element(begin,end);
             min = *min_elem;
-            os.encode<coder::elias_gamma>(min);
+            os.encode<coder::elias_gamma>(min+1);
         }
 
         // one block special case

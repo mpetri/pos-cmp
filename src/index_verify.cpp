@@ -145,6 +145,56 @@ int verify_index(t_idx& index,collection& col)
 }
 
 template<class t_idx>
+void verify_rel_index(t_idx& index,collection& col)
+{
+    LOG(INFO) << "VERIFY REL IDX";
+    sdsl::int_vector_mapper<> text(col.file_map[KEY_TEXTPERM]);
+    sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
+    for (size_t i=2; i<C.size(); i++) {
+        auto list = index.list(i);
+        auto iilists = index.m_docidx.list(i);
+        auto id_list = iilists.first;
+        auto freq_list = iilists.second;
+
+        auto itr = list.begin();
+
+        auto id_itr = id_list.begin();
+        auto id_end = id_list.end();
+        auto freq_itr = freq_list.begin();
+
+        auto sym = i;
+        bool error = false;
+        while (id_itr != id_end) {
+            auto doc_id = *id_itr;
+            auto freq = *freq_itr;
+            auto doc_start = index.doc_start(doc_id);
+
+            auto prev = 0;
+            for (size_t j=0; j<freq; j++) {
+                auto pos = *itr;
+                auto text_pos = doc_start + pos + prev;
+
+                if (text[text_pos] != sym) {
+                    LOG(ERROR) << j << " ERROR with sym ("<<sym<<")  at pos " << text_pos;
+                    LOG(ERROR) << "text[] = " << text[text_pos-1] << " , " << text[text_pos] << " , " << text[text_pos+1];
+                    error = true;
+                }
+                prev = prev+pos;
+                ++itr;
+            }
+            if (error) return;
+
+            ++freq_itr;
+            ++id_itr;
+        }
+
+        if (error) return;
+    }
+    LOG(INFO) << "REL IDX - OK.";
+}
+
+
+template<class t_idx>
 void verify_nextword_index(t_idx& index,collection& col)
 {
     LOG(INFO) << "VERIFY NEXTWORD";
@@ -177,6 +227,7 @@ void verify_nextword_index(t_idx& index,collection& col)
     LOG(INFO) << "NEXTWORD - OK.";
 }
 
+
 int main(int argc,const char* argv[])
 {
     _START_EASYLOGGINGPP(argc,argv);
@@ -205,12 +256,21 @@ int main(int argc,const char* argv[])
     //     index_nextword<eliasfano_list<true>,invidx_type> index(col);
     //     verify_nextword_index(index,col);
     // }
+    // {
+    //     using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+    //     index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
+    //     verify_index(index,col);
+    // }
     {
         using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
-        index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
-        verify_index(index,col);
+        index_relpos<optpfor_list<128,false>,invidx_type> index(col);
+        verify_rel_index(index,col);
     }
-
+    {
+        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+        index_relpos<eliasfano_list<false>,invidx_type> index(col);
+        verify_rel_index(index,col);
+    }
 
     return 0;
 }

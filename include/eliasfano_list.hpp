@@ -36,8 +36,12 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
             m_universe = is.decode<coder::elias_gamma>();
             uint8_t logm = sdsl::bits::hi(m_size)+1;
             uint8_t logu = sdsl::bits::hi(m_universe)+1;
-            if (logm == logu) logm--;
-            m_width_low = logu - logm;
+            if (logu < logm) {
+                m_width_low = 1;
+            } else {
+                if (logm == logu) logm--;
+                m_width_low = logu - logm;
+            }
             m_low_offset = is.tellg();
             m_high_offset = m_low_offset + m_size*m_width_low;
             m_cur_offset = end ? m_size : 0;
@@ -56,8 +60,12 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
         {
             uint8_t logm = sdsl::bits::hi(m_size)+1;
             uint8_t logu = sdsl::bits::hi(m_universe)+1;
-            if (logm == logu) logm--;
-            m_width_low = logu - logm;
+            if (logu < logm) {
+                m_width_low = 1;
+            } else {
+                if (logm == logu) logm--;
+                m_width_low = logu - logm;
+            }
 
             m_data = is.data();
             is.seek(start_offset);
@@ -253,15 +261,20 @@ struct eliasfano_list {
         if (m == 0) m = std::distance(begin,end);
         if (u == 0) {
             if (!t_sorted) {
-                u = std::accumulate(begin,end, 0)+1;
+                u = std::accumulate(begin,end, 0LL)+1;
             } else {
                 u = *(end-1)+1;
             }
         }
         uint8_t logm = sdsl::bits::hi(m)+1;
         uint8_t logu = sdsl::bits::hi(u)+1;
-        if (logm == logu) logm--;
-        uint8_t width_low = logu - logm;
+        uint8_t width_low;
+        if (logu < logm) {
+            width_low = 1;
+        } else {
+            if (logm == logu) logm--;
+            width_low = logu - logm;
+        }
 
         if (!t_compact) {
             // write size
