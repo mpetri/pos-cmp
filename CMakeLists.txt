@@ -52,6 +52,7 @@ add_library(fastpfor_lib STATIC external/FastPFor/src/bitpacking.cpp
 include_directories("${PROJECT_SOURCE_DIR}/external/googletest/include"
                      ${CMAKE_HOME_DIRECTORY}/include
                      ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
+                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort-2.0.1/include/
                      ${CMAKE_HOME_DIRECTORY}/external/googletest/include
                      ${CMAKE_HOME_DIRECTORY}/external/FastPFor/headers/
                      ${CMAKE_HOME_DIRECTORY}/external/easyloggingpp/src/
@@ -75,6 +76,10 @@ target_link_libraries(index-verify.x sdsl fastpfor_lib pthread)
 
 add_executable(index-daemon.x src/index_daemon.cpp)
 target_link_libraries(index-daemon.x sdsl fastpfor_lib zmq pthread)
+
+add_executable(generate_patterns.x src/generate_patterns.cpp)
+target_link_libraries(generate_patterns.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
+
 
 ADD_SUBDIRECTORY(external/libzmq)
 SET_PROPERTY(DIRECTORY external/libzmq PROPERTY ZMQ_BUILD_TESTS FALSE)

@@ -29,6 +29,7 @@ const std::string KEY_DOCPERM = "DPERM";
 const std::string KEY_POSPL = "POSPLISTS";
 const std::string KEY_DOCLEN = "DLEN";
 const std::string KEY_TEXTPERM = "TEXTPERM";
+const std::string KEY_CST = "CST";
 
 std::vector<std::string> collection_keys = {KEY_SA,
                                             KEY_TEXT,
@@ -40,7 +41,8 @@ std::vector<std::string> collection_keys = {KEY_SA,
                                             KEY_C,
                                             KEY_CC,
                                             KEY_SCC,
-                                            KEY_TEXTPERM
+                                            KEY_TEXTPERM,
+                                            KEY_CST
                                            };
 
 struct collection {
@@ -54,8 +56,12 @@ struct collection {
         // make sure all other dirs exist
         std::string index_directory = path+"/index/";
         utils::create_directory(index_directory);
+        std::string tmp_directory = path+"/tmp/";
+        utils::create_directory(tmp_directory);
         std::string results_directory = path+"/results/";
         utils::create_directory(results_directory);
+        std::string patterns_directory = path+"/patterns/";
+        utils::create_directory(patterns_directory);
         /* make sure the necessary files are present */
         if (! utils::file_exists(path+"/"+KEY_PREFIX+KEY_TEXT)) {
             LOG(FATAL) << "collection path does not contain text.";
