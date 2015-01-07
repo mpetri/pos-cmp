@@ -100,10 +100,12 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
             if (bucket != -1 && buckets[bucket] < max_patterns_per_bucket) {
                 auto node_depth = cst.depth(node);
                 std::vector<uint64_t> edge;
+                bool add = true;
                 for (size_t d=1; d<=node_depth; d++) {
                     edge.push_back((uint64_t)cst.edge(node,d));
-                    if(edge.back() == 1ULL) continue;
+                    if (edge.back() == 1ULL) add = false;
                 }
+                if (!add) continue;
                 pofs << bucket << ";"
                      << num_unique << ";"
                      << node_depth << ";"
@@ -157,10 +159,12 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
                         auto bucket = determine_bucket(num_unique);
                         if (bucket != -1 && buckets[bucket] < max_patterns_per_bucket) {
                             std::vector<uint64_t> edge;
+                            bool add = true;
                             for (size_t d=1; d<=node_depth; d++) {
                                 edge.push_back((uint64_t)cst.edge(dfs_node,d));
-                                if(edge.back() == 1ULL) continue;
+                                if (edge.back() == 1ULL) add = false;
                             }
+                            if (!add) continue;
                             pofs << bucket << ";"
                                  << num_unique << ";"
                                  << node_depth << ";"
@@ -209,10 +213,12 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
             if (bucket != -1 && buckets[bucket] < max_patterns_per_bucket) {
                 auto node_depth = cst.depth(node);
                 std::vector<uint64_t> edge;
+                bool add = true;
                 for (size_t d=1; d<=node_depth; d++) {
                     edge.push_back((uint64_t)cst.edge(node,d));
-                    if(edge.back() == 1ULL) continue;
+                    if (edge.back() == 1ULL) add = false;
                 }
+                if (!add) continue;
                 pofs << bucket << ";"
                      << num_unique << ";"
                      << node_depth << ";"

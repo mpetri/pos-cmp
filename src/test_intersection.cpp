@@ -3,6 +3,7 @@
 #include "indexes.hpp"
 #include "list_types.hpp"
 #include "patterns.hpp"
+#include "intersection.hpp"
 
 #include "sdsl/suffix_trees.hpp"
 #include "sdsl/suffix_arrays.hpp"
@@ -58,10 +59,11 @@ void verify_intersection(const t_idx& index,const std::vector<pattern_t>& patter
     sdsl::int_vector_mapper<> text(col.file_map[KEY_TEXTPERM]);
     sdsl::int_vector_mapper<> SA(col.file_map[KEY_SA]);
     for (const auto& pattern : patterns) {
-        LOG(INFO) << "check intersection for pattern " << pattern.id << " m=" << pattern.m << " nocc=" << pattern.nocc << " ndoc=" << pattern.ndoc;
         size_t len = pattern.m;
         auto result = index.phrase_positions(pattern.tokens);
         if (result.size() != pattern.nocc) {
+            LOG(ERROR) << "check intersection for pattern " << pattern.id << " m=" << pattern.m << " nocc=" << pattern.nocc << " ndoc=" << pattern.ndoc;
+            LOG(ERROR) << "sp= " << pattern.sp << " ep=" << pattern.ep;
             std::string p = "T='";
             for (const auto& t : pattern.tokens) {
                 p += std::to_string(t)+" ";
@@ -83,6 +85,7 @@ void verify_intersection(const t_idx& index,const std::vector<pattern_t>& patter
         for (const auto& pos : result) {
             for (size_t i=0; i<len; i++) {
                 if (text[pos+i] != pattern.tokens[i]) {
+                    LOG(ERROR) << "check intersection for pattern " << pattern.id << " m=" << pattern.m << " nocc=" << pattern.nocc << " ndoc=" << pattern.ndoc;
                     LOG(ERROR) << "pattern=" << pattern.id << " pos=" << pos << " offset=" << i;
                 }
             }

@@ -157,6 +157,10 @@ struct offset_proxy_list {
     {
         return (int64_t) m_offset;
     }
+    size_type size() const
+    {
+        return m_list.size();
+    }
     bool operator<(const offset_proxy_list& b) const
     {
         return m_list.size() < b.m_list.size();

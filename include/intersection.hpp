@@ -13,8 +13,8 @@ intersect(t_itr fbegin,t_itr fend,t_itr2 sbegin,t_itr2 send,int64_t offset = 0)
     if (n < m) {
         size_t value_offset = (size_t) std::min(int64_t(0),offset);
         while (fbegin != fend) {
-            auto cur = *fbegin;
-            if (sbegin.skip(cur+offset)) {
+            int64_t cur = *fbegin;
+            if (cur + offset >= 0 && sbegin.skip(cur+offset)) {
                 res[i++] = cur+value_offset;
             }
             if (sbegin == send) break;
@@ -23,8 +23,8 @@ intersect(t_itr fbegin,t_itr fend,t_itr2 sbegin,t_itr2 send,int64_t offset = 0)
     } else {
         size_t value_offset = (size_t) std::max(int64_t(0),offset);
         while (sbegin != send) {
-            auto cur = *sbegin;
-            if (fbegin.skip(cur-offset)) {
+            int64_t cur = *sbegin;
+            if (cur-offset >= 0 && fbegin.skip(cur-offset)) {
                 res[i++] = cur-value_offset;
             }
             if (fbegin == fend) break;
