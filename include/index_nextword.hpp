@@ -41,7 +41,7 @@ class index_nextword
             } else { // construct
                 // (2) pos index
                 LOG(INFO) << "CONSTRUCT abs nextword index";
-                std::vector<uint64_t> meta_data(m_num_lists);
+                std::vector<uint64_t> meta_data;
                 sdsl::int_vector_mapper<> CC(col.file_map[KEY_CC]);
                 {
                     bit_ostream bvo(m_data);
@@ -50,6 +50,7 @@ class index_nextword
                     sdsl::int_vector_mapper<> SCC(col.file_map[KEY_SCC]);
                     sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
                     m_num_lists = CC.size();
+                    meta_data.resize(m_num_lists);
                     size_t csum = 1; // skip 0
                     m_sym_width = text.width();
                     for (size_t i=0; i<CC.size(); i++) {
@@ -137,7 +138,7 @@ class index_nextword
             return m_docidx.list(i).first;
         }
         std::vector<typename doclist_type::list_type>
-        doc_lists(std::vector<uint64_t> ids)
+        doc_lists(std::vector<uint64_t> ids) const
         {
             std::vector<typename doclist_type::list_type> lists;
             for (const auto& id : ids) {
@@ -146,21 +147,52 @@ class index_nextword
             return lists;
         }
         intersection_result
-        phrase_list(std::vector<uint64_t> ids)
+        phrase_list(std::vector<uint64_t> ids) const
         {
             if (ids.size() == 2) {
                 return map_to_doc_ids(list(ids[0],ids[1]));
             }
+            std::vector<typename plist_type::list_type> plists;
             std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
             for (size_t i=0; i<ids.size(); i+=2) {
-                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(list(ids[i],ids[i+1]),i));
+                plists.emplace_back(list(ids[i],ids[i+1]));
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(plists.back(),i));
             }
             auto res = pos_intersect(lists);
             return map_to_doc_ids(res);
         }
+        intersection_result
+        phrase_positions(std::vector<uint64_t> ids) const
+        {
+            if (ids.size() == 2) {
+                auto lst = list(ids[0],ids[1]);
+                intersection_result res(lst.size());
+                auto itr = lst.begin();
+                auto end = lst.end();
+                size_t n=0;
+                while (itr != end) {
+                    res[n++] = *itr;
+                    ++itr;
+                }
+                return res;
+            }
+            std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
+            std::vector<typename plist_type::list_type> plists;
+            auto m = ids.size();
+            if (m%2!=0) m--;
+            for (size_t i=0; i<m; i+=2) {
+                plists.emplace_back(list(ids[i],ids[i+1]));
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(plists.back(),i));
+            }
+            if (ids.size()%2!=0) {
+                plists.emplace_back(list(ids[ids.size()-2],ids[ids.size()-1]));
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(plists.back(),ids.size()-2));
+            }
+            return pos_intersect(lists);
+        }
         template<class t_list>
         intersection_result
-        map_to_doc_ids(const t_list& list)
+        map_to_doc_ids(const t_list& list) const
         {
             intersection_result res(list.size());
             auto itr = list.begin();

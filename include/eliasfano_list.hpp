@@ -20,6 +20,7 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
         uint64_t m_low_offset = 0;
         uint64_t m_high_offset = 0;
         const uint64_t* m_data;
+        bool m_end = false;
     private:
         mutable value_type m_cur_elem = 0;
         mutable size_type m_last_accessed_offset = std::numeric_limits<uint64_t>::max();
@@ -27,7 +28,7 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
         size_type m_cur_offset = 0;
         mutable value_type m_prev_elem = 0;
     public:
-        ef_iterator(const bit_istream& is,size_t start_offset,bool end)
+        ef_iterator(const bit_istream& is,size_t start_offset,bool end) : m_end(end)
         {
             static_assert(t_compact == false,"Can't use this constructor with compact ef representation.");
             m_data = is.data();
@@ -56,7 +57,7 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
             m_last_accessed_offset = m_cur_offset;
         }
         ef_iterator(const bit_istream& is,size_t start_offset,bool end,size_type size,size_type universe)
-            : m_size(size) , m_universe(universe)
+            : m_size(size) , m_universe(universe) , m_end(end)
         {
             uint8_t logm = sdsl::bits::hi(m_size)+1;
             uint8_t logu = sdsl::bits::hi(m_universe)+1;
@@ -130,7 +131,7 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
         }
         bool operator ==(const ef_iterator& b) const
         {
-            return m_cur_offset == b.m_cur_offset;
+            return (b.m_end && m_cur_offset > b.m_cur_offset) || m_cur_offset == b.m_cur_offset;
         }
         bool operator !=(const ef_iterator& b) const
         {
@@ -194,6 +195,10 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
                 auto skip_zeros = high_bucket - cur_bucket;
                 auto zero_pos = bit_magic::next_Xth_zero(m_data,m_high_offset+m_cur_high_offset,skip_zeros) - m_high_offset;
                 m_cur_offset = m_cur_offset + (zero_pos - m_cur_high_offset) - skip_zeros + 1;
+                if (m_cur_offset >= m_size) {
+                    m_cur_offset = m_size;
+                    return false;
+                }
                 m_cur_high_offset = sdsl::bits::next(m_data,m_high_offset+zero_pos) - m_high_offset;
                 if (m_cur_high_offset != zero_pos+1) {
                     // if the bucket we hit doesn't exactly match we don't have to search inside the bucket
@@ -215,6 +220,10 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
                     auto ones_skipped = i-m_cur_offset;
                     m_cur_high_offset = m_cur_high_offset + ones_skipped;
                     m_cur_offset += ones_skipped;
+                    if (m_cur_offset >= m_size) {
+                        m_cur_offset = m_size;
+                        return false;
+                    }
                     m_cur_elem = (high_bucket << m_width_low) | cur_low;
                     m_last_accessed_offset = m_cur_offset;
                     if (m_cur_elem == pos) return true;
@@ -224,6 +233,10 @@ class ef_iterator : public std::iterator<std::random_access_iterator_tag,uint64_
             // nothing found in the bucket we were interested in. move on to the next larger bucket
             m_cur_high_offset = sdsl::bits::next(m_data,m_high_offset+next_zero_pos) - m_high_offset;
             m_cur_offset += remaining_bucket_size;
+            if (m_cur_offset >= m_size) {
+                m_cur_offset = m_size;
+                return false;
+            }
             cur_bucket = m_cur_high_offset - m_cur_offset;
             m_cur_elem = (cur_bucket << m_width_low) | low(i);
             m_last_accessed_offset = m_cur_offset;

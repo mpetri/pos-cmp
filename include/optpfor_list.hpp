@@ -73,7 +73,7 @@ class optpfor_iterator : public std::iterator<std::random_access_iterator_tag,ui
             if (end) m_cur_offset = m_size;
             m_last_accessed_block = 0;
         }
-        optpfor_iterator() = delete;
+        optpfor_iterator() = default;
         optpfor_iterator(const optpfor_iterator& pi) = default;
         optpfor_iterator(optpfor_iterator&& pi) = default;
         optpfor_iterator& operator=(const optpfor_iterator& pi) = default;
@@ -167,11 +167,13 @@ class optpfor_iterator : public std::iterator<std::random_access_iterator_tag,ui
                 }
             }
             // search in block
-            size_t block_size = (m_cur_block == m_num_blocks-1)  ? m_size % t_block_size : t_block_size;
+            size_t block_size = (m_cur_block == m_num_blocks-1 && m_size % t_block_size != 0)  ? m_size % t_block_size : t_block_size;
             for (size_t i=in_block_offset; i<block_size; i++) {
                 if (m_tmp_data[i] >= pos) {
                     m_cur_offset = m_cur_block*t_block_size + i;
-                    if (m_tmp_data[i] == pos) return true;
+                    if (m_tmp_data[i] == pos) {
+                        return true;
+                    }
                     return false;
                 }
             }

@@ -16,6 +16,22 @@ struct list_dummy {
     {
         m_size = m_begin.size();
     }
+    list_dummy() = default;
+    list_dummy(list_dummy&& ld)
+    {
+        m_begin = std::move(ld.m_begin);
+        m_end = std::move(ld.m_end);
+        m_size = ld.m_size;
+    }
+    list_dummy& operator=(list_dummy&& ld)
+    {
+        m_begin = std::move(ld.m_begin);
+        m_end = std::move(ld.m_end);
+        m_size = ld.m_size;
+        return *this;
+    }
+    list_dummy(const list_dummy& ld) = default;
+    list_dummy& operator=(const list_dummy& ld) = default;
     t_itr begin() const
     {
         return m_begin;
@@ -141,6 +157,28 @@ struct offset_proxy_list {
     list_type m_list;
     uint64_t m_offset = 0;
     offset_proxy_list(list_type& l,size_type off) : m_list(l), m_offset(off) {}
+    offset_proxy_list(const offset_proxy_list& opl)
+    {
+        m_list = opl.m_list;
+        m_offset = opl.m_offset;
+    }
+    offset_proxy_list(offset_proxy_list&& opl)
+    {
+        m_list = std::move(opl.m_list);
+        m_offset = opl.m_offset;
+    }
+    offset_proxy_list& operator=(offset_proxy_list&& opl)
+    {
+        m_list = std::move(opl.m_list);
+        m_offset = opl.m_offset;
+        return *this;
+    }
+    offset_proxy_list& operator=(const offset_proxy_list& opl)
+    {
+        m_list = opl.m_list;
+        m_offset = opl.m_offset;
+        return *this;
+    }
     void resize(size_type s)
     {
         m_list.resize(s);

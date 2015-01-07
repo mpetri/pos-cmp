@@ -115,10 +115,23 @@ int main(int argc,const char* argv[])
     /* load indexes and test */
     {
         using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+        index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
+        verify_intersection(index,patterns,col);
+    }
+    {
+        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+        index_nextword<uniform_eliasfano_list<128>,invidx_type> index(col);
+        verify_intersection(index,patterns,col);
+    }
+    {
+        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
         index_abspos<eliasfano_list<true,false>,invidx_type> index(col);
         verify_intersection(index,patterns,col);
     }
-
-
+    {
+        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+        index_abspos<optpfor_list<128,true>,invidx_type> index(col);
+        verify_intersection(index,patterns,col);
+    }
     return 0;
 }

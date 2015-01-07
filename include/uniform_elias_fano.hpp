@@ -40,8 +40,9 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
     private:
         uint64_t m_size;
         uint64_t m_num_blocks;
-        const uint64_t* m_data;
-        const uint64_t* m_blockstart;
+        const uint64_t* m_data = nullptr;
+        const uint64_t* m_blockstart = nullptr;
+        const bit_istream* m_iss = nullptr;
     private:
         mutable value_type m_cur_elem = 0;
         mutable size_type m_last_accessed_offset = std::numeric_limits<uint64_t>::max();
@@ -57,9 +58,14 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
         mutable ef_iterator<true,true> m_ef_block_end;
         mutable bv_iterator<true> m_bv_block_itr;
         mutable bv_iterator<true> m_bv_block_end;
-        const bit_istream& iss;
     public:
-        uniform_ef_iterator(const bit_istream& is,size_t start_offset,bool end) : iss(is)
+        uniform_ef_iterator() = default;
+        uniform_ef_iterator(const uniform_ef_iterator& pi) = default;
+        uniform_ef_iterator(uniform_ef_iterator&& pi) = default;
+        uniform_ef_iterator& operator=(uniform_ef_iterator&& pi) = default;
+        uniform_ef_iterator& operator=(const uniform_ef_iterator& pi) = default;
+    public:
+        uniform_ef_iterator(const bit_istream& is,size_t start_offset,bool end) : m_iss(&is)
         {
             m_data = is.data();
             is.seek(start_offset);
@@ -92,12 +98,12 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
                     auto items_in_block = (m_size - m_cur_offset) < t_block_size ? m_size - m_cur_offset : t_block_size;
                     m_cur_block_type = determine_block_type(items_in_block,m_cur_block_universe);
                     if (m_cur_block_type == uef_blocktype::BV) {
-                        auto list = bitvector_list<true>::materialize(iss,m_blockstart[0],items_in_block,m_cur_block_universe);
+                        auto list = bitvector_list<true>::materialize(*m_iss,m_blockstart[0],items_in_block,m_cur_block_universe);
                         m_bv_block_itr = list.begin();
                         m_bv_block_end = list.end();
                     }
                     if (m_cur_block_type == uef_blocktype::EF) {
-                        auto list = eliasfano_list<true,true>::materialize(iss,m_blockstart[0],items_in_block,m_cur_block_universe);
+                        auto list = eliasfano_list<true,true>::materialize(*m_iss,m_blockstart[0],items_in_block,m_cur_block_universe);
                         m_ef_block_itr = list.begin();
                         m_ef_block_end = list.end();
                     }
@@ -105,11 +111,6 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
                 }
             }
         }
-        uniform_ef_iterator() = delete;
-        uniform_ef_iterator(const uniform_ef_iterator& pi) = default;
-        uniform_ef_iterator(uniform_ef_iterator&& pi) = default;
-        uniform_ef_iterator& operator=(const uniform_ef_iterator& pi) = default;
-        uniform_ef_iterator& operator=(uniform_ef_iterator&& pi) = default;
     public:
         size_type offset() const
         {
@@ -189,12 +190,12 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
                     auto items_in_block = (m_size - block_start_offset) < t_block_size ? m_size - block_start_offset : t_block_size;
                     m_cur_block_type = determine_block_type(items_in_block,m_cur_block_universe);
                     if (m_cur_block_type == uef_blocktype::BV) {
-                        auto list = bitvector_list<true>::materialize(iss,m_blockstart[new_block],items_in_block,m_cur_block_universe);
+                        auto list = bitvector_list<true>::materialize(*m_iss,m_blockstart[new_block],items_in_block,m_cur_block_universe);
                         m_bv_block_itr = list.begin();
                         m_bv_block_end = list.end();
                     }
                     if (m_cur_block_type == uef_blocktype::EF) {
-                        auto list = eliasfano_list<true,true>::materialize(iss,m_blockstart[new_block],items_in_block,m_cur_block_universe);
+                        auto list = eliasfano_list<true,true>::materialize(*m_iss,m_blockstart[new_block],items_in_block,m_cur_block_universe);
                         m_ef_block_itr = list.begin();
                         m_ef_block_end = list.end();
                     }
@@ -236,12 +237,12 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
                 auto items_in_block = (m_size - block_start_offset) < t_block_size ? m_size - block_start_offset : t_block_size;
                 m_cur_block_type = determine_block_type(items_in_block,m_cur_block_universe);
                 if (m_cur_block_type == uef_blocktype::BV) {
-                    auto list = bitvector_list<true>::materialize(iss,m_blockstart[block],items_in_block,m_cur_block_universe);
+                    auto list = bitvector_list<true>::materialize(*m_iss,m_blockstart[block],items_in_block,m_cur_block_universe);
                     m_bv_block_itr = list.begin();
                     m_bv_block_end = list.end();
                 }
                 if (m_cur_block_type == uef_blocktype::EF) {
-                    auto list = eliasfano_list<true,true>::materialize(iss,m_blockstart[block],items_in_block,m_cur_block_universe);
+                    auto list = eliasfano_list<true,true>::materialize(*m_iss,m_blockstart[block],items_in_block,m_cur_block_universe);
                     m_ef_block_itr = list.begin();
                     m_ef_block_end = list.end();
                 }
