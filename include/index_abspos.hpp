@@ -3,6 +3,7 @@
 #include "list_types.hpp"
 #include "index_invidx.hpp"
 #include "doc_pos_mapper.hpp"
+#include "intersection.hpp"
 
 #include "easylogging++.h"
 
@@ -105,7 +106,7 @@ class index_abspos
             return m_docidx.list(i).first;
         }
         std::vector<typename doclist_type::list_type>
-        doc_lists(std::vector<uint64_t> ids)
+        doc_lists(std::vector<uint64_t> ids) const
         {
             std::vector<typename doclist_type::list_type> lists;
             for (const auto& id : ids) {
@@ -114,7 +115,7 @@ class index_abspos
             return lists;
         }
         intersection_result
-        phrase_list(std::vector<uint64_t> ids)
+        phrase_list(std::vector<uint64_t> ids) const
         {
             std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
             size_type i = 0;
@@ -124,18 +125,20 @@ class index_abspos
             return map_to_doc_ids(pos_intersect(lists));
         }
         intersection_result
-        phrase_positions(std::vector<uint64_t> ids)
+        phrase_positions(std::vector<uint64_t> ids) const
         {
+            std::vector<typename plist_type::list_type> plists;
             std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
             size_type i = 0;
             for (const auto& id : ids) {
-                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(list(id),i++));
+                plists.emplace_back(list(id));
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(plists.back(),i++));
             }
             return pos_intersect(lists);
         }
         template<class t_list>
         intersection_result
-        map_to_doc_ids(const t_list& list)
+        map_to_doc_ids(const t_list& list) const
         {
             intersection_result res(list.size());
             auto itr = list.begin();

@@ -2,6 +2,7 @@
 #include "collection.hpp"
 #include "indexes.hpp"
 #include "list_types.hpp"
+#include "patterns.hpp"
 
 #include "sdsl/suffix_trees.hpp"
 #include "sdsl/suffix_arrays.hpp"
@@ -52,23 +53,41 @@ parse_args(int argc,const char* argv[])
 }
 
 template<class t_idx>
-verify_intersection(const t_idx& index,const std::vector<pattern_t>& patterns,const collection& col) {
-	sdsl::int_vector_mapper<> text(col.file_map[KEY_TEXTPERM]);
-	for(const auto& pattern : patterns) {
-		LOG(INFO) << "check intersection for pattern " << pattern.id;
-		size_t len = pattern.m;
-		auto result = phrase_positions(pattern.tokens);
-		if(result.size() != pattern.nocc) {
-			LOG(ERROR) << "pattern=" << pattern.id << " nocc=" << pattern.nocc << " is=" << result.size();
-		}
-		for(const auto& pos : result) {
-			for(size_t i=0;i<len;i++) {
-				if(text[pos+i] != pattern.tokens[i]) {
-					LOG(ERROR) << "pattern=" << pattern.id << " pos=" << pos << " offset=" << i;
-				}
-			}
-		}
-	}
+void verify_intersection(const t_idx& index,const std::vector<pattern_t>& patterns,collection& col)
+{
+    sdsl::int_vector_mapper<> text(col.file_map[KEY_TEXTPERM]);
+    sdsl::int_vector_mapper<> SA(col.file_map[KEY_SA]);
+    for (const auto& pattern : patterns) {
+        LOG(INFO) << "check intersection for pattern " << pattern.id << " m=" << pattern.m << " nocc=" << pattern.nocc << " ndoc=" << pattern.ndoc;
+        size_t len = pattern.m;
+        auto result = index.phrase_positions(pattern.tokens);
+        if (result.size() != pattern.nocc) {
+            std::string p = "T='";
+            for (const auto& t : pattern.tokens) {
+                p += std::to_string(t)+" ";
+            }
+            LOG(ERROR) << "pattern=" << pattern.id << " nocc=" << pattern.nocc << " is=" << result.size() << " " << p;
+            std::vector<uint64_t> SSA(SA.begin()+pattern.sp,SA.begin()+pattern.ep+1);
+            std::sort(SSA.begin(),SSA.end());
+            std::cout << "COR = ";
+            for (size_t i=0; i<SSA.size(); i++) {
+                std::cout << SSA[i] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "IS  = ";
+            for (size_t i=0; i<result.size(); i++) {
+                std::cout << result[i] << " ";
+            }
+            std::cout << std::endl;
+        }
+        for (const auto& pos : result) {
+            for (size_t i=0; i<len; i++) {
+                if (text[pos+i] != pattern.tokens[i]) {
+                    LOG(ERROR) << "pattern=" << pattern.id << " pos=" << pos << " offset=" << i;
+                }
+            }
+        }
+    }
 }
 
 int main(int argc,const char* argv[])
@@ -93,7 +112,7 @@ int main(int argc,const char* argv[])
     /* load indexes and test */
     {
         using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
-        index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
+        index_abspos<eliasfano_list<true,false>,invidx_type> index(col);
         verify_intersection(index,patterns,col);
     }
 
