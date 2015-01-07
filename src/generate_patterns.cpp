@@ -82,7 +82,7 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
     std::mt19937 gen(4711);
     std::uniform_int_distribution<uint64_t> dis(0,cst.nodes()-1);
     sdsl::bit_vector nodes_tested(cst.nodes());
-    for (size_t i=0; i<10000000; i++) {
+    for (size_t i=0; i<40000000; i++) {
         auto id = dis(gen);
         if (nodes_tested[id]==1) continue;
         nodes_tested[id] = 1;
@@ -102,6 +102,7 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
                 std::vector<uint64_t> edge;
                 for (size_t d=1; d<=node_depth; d++) {
                     edge.push_back((uint64_t)cst.edge(node,d));
+                    if(edge.back() == 1ULL) continue;
                 }
                 pofs << bucket << ";"
                      << num_unique << ";"
@@ -116,8 +117,8 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
                 buckets[bucket]++;
             }
         }
-        if (i%100000==0) {
-            std::cout << i << " (" << i/(100000.0f)  << ") [";
+        if (i%400000==0) {
+            std::cout << i << " (" << i/(400000.0f)  << ") [";
             for (size_t l=0; l<buckets.size(); l++) {
                 std::cout << buckets[l] << " ";
             }
@@ -127,7 +128,7 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
 
     /* pick some random nodes and perform a dfs traversal */
     LOG(INFO) << "Pick random nodes and perform DFS";
-    for (size_t j=0; j<10000000; j++) {
+    for (size_t j=0; j<50000000; j++) {
         auto id = dis(gen);
         if (nodes_tested[id]==1) continue;
         nodes_tested[id] = 1;
@@ -158,6 +159,7 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
                             std::vector<uint64_t> edge;
                             for (size_t d=1; d<=node_depth; d++) {
                                 edge.push_back((uint64_t)cst.edge(dfs_node,d));
+                                if(edge.back() == 1ULL) continue;
                             }
                             pofs << bucket << ";"
                                  << num_unique << ";"
@@ -175,8 +177,8 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
                 }
             }
         }
-        if (j%100000==0) {
-            std::cout << j << " (" << j/(100000.0f)  << ") [";
+        if (j%500000==0) {
+            std::cout << j << " (" << j/(500000.0f)  << ") [";
             for (size_t l=0; l<buckets.size(); l++) {
                 std::cout << buckets[l] << " ";
             }
@@ -189,7 +191,7 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
     typedef sdsl::cst_bfs_iterator<t_cst> iterator;
     iterator begin = iterator(&cst, cst.root());
     iterator end   = iterator(&cst, cst.root(), true, true);
-    size_t max_nodes_examined = 10000000;
+    size_t max_nodes_examined = 50000000;
     for (iterator it = begin; it != end; ++it) {
         auto node = *it;
         auto id = cst.id(node);
@@ -209,6 +211,7 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
                 std::vector<uint64_t> edge;
                 for (size_t d=1; d<=node_depth; d++) {
                     edge.push_back((uint64_t)cst.edge(node,d));
+                    if(edge.back() == 1ULL) continue;
                 }
                 pofs << bucket << ";"
                      << num_unique << ";"
@@ -223,8 +226,8 @@ void generate_patterns(t_cst& cst,collection& col,uint32_t min_size,uint32_t max
                 buckets[bucket]++;
             }
         }
-        if (max_nodes_examined%100000==0) {
-            std::cout << (10000000-max_nodes_examined) << " (" << (10000000-max_nodes_examined)/(100000.0f)  << ") [";
+        if (max_nodes_examined%500000==0) {
+            std::cout << (50000000-max_nodes_examined) << " (" << (50000000-max_nodes_examined)/(100000.0f)  << ") [";
             for (size_t l=0; l<buckets.size(); l++) {
                 std::cout << buckets[l] << " ";
             }
