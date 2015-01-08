@@ -123,6 +123,16 @@ class index_abspos
             }
             return map_to_doc_ids(pos_intersect(lists));
         }
+        intersection_result
+        phrase_positions(std::vector<uint64_t> ids)
+        {
+            std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
+            size_type i = 0;
+            for (const auto& id : ids) {
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(list(id),i++));
+            }
+            return pos_intersect(lists);
+        }
         template<class t_list>
         intersection_result
         map_to_doc_ids(const t_list& list)
