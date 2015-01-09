@@ -81,7 +81,11 @@ add_executable(generate_patterns.x src/generate_patterns.cpp)
 target_link_libraries(generate_patterns.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
 add_executable(test_intersection.x src/test_intersection.cpp)
-target_link_libraries(test_intersection.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
+target_link_libraries(test_intersection.x sdsl fastpfor_lib pthread)
+
+add_executable(index-bench.x src/index_bench.cpp)
+target_link_libraries(index-bench.x sdsl fastpfor_lib pthread)
+
 
 ADD_SUBDIRECTORY(external/libzmq)
 SET_PROPERTY(DIRECTORY external/libzmq PROPERTY ZMQ_BUILD_TESTS FALSE)
