@@ -69,10 +69,10 @@ enable_testing()
 add_test(TestsPass unittest.x)
 
 add_executable(index-create.x src/index_create.cpp)
-target_link_libraries(index-create.x sdsl fastpfor_lib pthread)
+target_link_libraries(index-create.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
 add_executable(index-verify.x src/index_verify.cpp)
-target_link_libraries(index-verify.x sdsl fastpfor_lib pthread)
+target_link_libraries(index-verify.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
 add_executable(index-daemon.x src/index_daemon.cpp)
 target_link_libraries(index-daemon.x sdsl fastpfor_lib zmq pthread)
@@ -81,10 +81,13 @@ add_executable(generate_patterns.x src/generate_patterns.cpp)
 target_link_libraries(generate_patterns.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
 add_executable(test_intersection.x src/test_intersection.cpp)
-target_link_libraries(test_intersection.x sdsl fastpfor_lib pthread)
+target_link_libraries(test_intersection.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
 add_executable(index-bench.x src/index_bench.cpp)
-target_link_libraries(index-bench.x sdsl fastpfor_lib pthread)
+target_link_libraries(index-bench.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
+
+add_executable(index-verify-doc.x src/index_verify_doc.cpp)
+target_link_libraries(index-verify-doc.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
 
 ADD_SUBDIRECTORY(external/libzmq)

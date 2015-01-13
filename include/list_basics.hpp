@@ -149,6 +149,7 @@ struct intersection_result {
     }
 };
 
+using docfreq_result = std::vector<std::pair<uint64_t,uint64_t>>;
 
 template<class t_list>
 struct offset_proxy_list {

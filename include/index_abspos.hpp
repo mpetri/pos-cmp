@@ -114,13 +114,15 @@ class index_abspos
             }
             return lists;
         }
-        intersection_result
+        docfreq_result
         phrase_list(std::vector<uint64_t> ids) const
         {
+            std::vector<typename plist_type::list_type> plists;
             std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
             size_type i = 0;
             for (const auto& id : ids) {
-                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(list(id),i++));
+                plists.emplace_back(list(id));
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(plists.back(),i++));
             }
             return map_to_doc_ids(pos_intersect(lists));
         }
@@ -137,26 +139,28 @@ class index_abspos
             return pos_intersect(lists);
         }
         template<class t_list>
-        intersection_result
+        docfreq_result
         map_to_doc_ids(const t_list& list) const
         {
-            intersection_result res(list.size());
+            docfreq_result res;
             auto itr = list.begin();
             auto end = list.end();
             auto prev_docid = m_dpm.map_to_id(*itr);
             ++itr;
-            size_t n=0;
+            size_t freq = 1;
             while (itr != end) {
                 auto pos = *itr;
                 auto doc_id = m_dpm.map_to_id(pos);
                 if (doc_id != prev_docid) {
-                    res[n++] = prev_docid;
+                    res.emplace_back(prev_docid,freq);
+                    freq = 1;
                     prev_docid = doc_id;
+                } else {
+                    freq++;
                 }
                 ++itr;
             }
-            res[n++] = prev_docid;
-            res.resize(n);
+            res.emplace_back(prev_docid,freq);
             return res;
         }
 };

@@ -57,13 +57,21 @@ int main(int argc,const char* argv[])
     collection col(args.collection_dir);
 
     /* create index */
-    using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
+    // using invidx_type = index_invidx<eliasfano_list<true>,eliasfano_list<false>>;
+    // {
+    //     index_abspos<optpfor_list<128,true>,invidx_type> index(col);
+    // }
+    // {
+    //     index_relpos<optpfor_list<128,false>,invidx_type> index(col);
+    // }
     {
-        index_abspos<optpfor_list<128,true>,invidx_type> index(col);
+        index_wt<> index(col);
     }
     {
-        index_relpos<optpfor_list<128,false>,invidx_type> index(col);
+        index_sort<> index(col);
     }
-
+    {
+        index_sada<> index(col);
+    }
     return 0;
 }
