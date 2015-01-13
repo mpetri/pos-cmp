@@ -154,9 +154,15 @@ class index_nextword
             }
             std::vector<typename plist_type::list_type> plists;
             std::vector<offset_proxy_list<typename plist_type::list_type>> lists;
-            for (size_t i=0; i<ids.size(); i+=2) {
+            auto m = ids.size();
+            if (m%2!=0) m--;
+            for (size_t i=0; i<m; i+=2) {
                 plists.emplace_back(list(ids[i],ids[i+1]));
                 lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(plists.back(),i));
+            }
+            if (ids.size()%2!=0) {
+                plists.emplace_back(list(ids[ids.size()-2],ids[ids.size()-1]));
+                lists.emplace_back(offset_proxy_list<typename plist_type::list_type>(plists.back(),ids.size()-2));
             }
             auto res = pos_intersect(lists);
             return map_to_doc_ids(res);

@@ -111,6 +111,11 @@ int main(int argc,const char* argv[])
     }
     {
         using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
+        index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
+        verify_index(index,patterns,"ABS-UEF-128");
+    }
+    {
+        using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
         index_nextword<eliasfano_list<true>,invidx_type> index(col);
         verify_index(index,patterns,"NEXT-EF");
     }
