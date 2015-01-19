@@ -48,7 +48,7 @@ std::vector<std::string> collection_keys = {KEY_SA,
 struct collection {
     std::string path;
     std::map<std::string,std::string> file_map;
-    collection(const std::string& p) : path(p)
+    collection(const std::string& p) : path(p+"/")
     {
         if (! utils::directory_exists(path)) {
             throw std::runtime_error("collection path not found.");

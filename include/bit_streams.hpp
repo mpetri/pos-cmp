@@ -12,7 +12,7 @@ struct bit_ostream {
         // constructor
         explicit bit_ostream(sdsl::bit_vector& bv,size_t start_offset=0) : m_bv(bv)
         {
-            if (m_bv.size() < min_bv_size) resize(min_bv_size);
+            if (m_bv.size() < min_bv_size) m_bv.resize(min_bv_size);
             data_ptr = bv.data()+(start_offset>>6);
             in_word_offset = start_offset&63;
             cur_size = m_bv.size();
@@ -127,6 +127,11 @@ struct bit_ostream {
                 ++data_ptr;
             }
         }
+        void seek(size_type offset)
+        {
+            data_ptr = m_bv.data()+(offset>>6);
+            in_word_offset = offset&0x3F;
+        }
 
         void inline resize(size_type n)
         {
@@ -155,6 +160,10 @@ struct bit_ostream {
         uint64_t* cur_data()
         {
             return data_ptr;
+        }
+        const sdsl::bit_vector& bitvector() const
+        {
+            return m_bv;
         }
     private:
         sdsl::bit_vector& m_bv;

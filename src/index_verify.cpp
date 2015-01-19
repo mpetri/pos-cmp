@@ -241,11 +241,11 @@ int main(int argc,const char* argv[])
     collection col(args.collection_dir);
 
     /* create index */
-    // {
-    //     using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
-    //     index_abspos<eliasfano_list<true>,invidx_type> index(col);
-    //     verify_index(index,col);
-    // }
+    {
+        using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
+        index_abspos<eliasfano_skip_list<64,true>,invidx_type> index(col);
+        verify_index(index,col);
+    }
     // {
     //     using invidx_type = index_invidx<eliasfano_list<true>,optpfor_list<128,false>>;
     //     index_abspos<eliasfano_list<true>,invidx_type> index(col);
@@ -261,16 +261,16 @@ int main(int argc,const char* argv[])
     //     index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
     //     verify_index(index,col);
     // }
-    {
-        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
-        index_relpos<optpfor_list<128,false>,invidx_type> index(col);
-        verify_rel_index(index,col);
-    }
-    {
-        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
-        index_relpos<eliasfano_list<false>,invidx_type> index(col);
-        verify_rel_index(index,col);
-    }
+    // {
+    //     using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+    //     index_relpos<optpfor_list<128,false>,invidx_type> index(col);
+    //     verify_rel_index(index,col);
+    // }
+    // {
+    //     using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+    //     index_relpos<eliasfano_list<false>,invidx_type> index(col);
+    //     verify_rel_index(index,col);
+    // }
 
     return 0;
 }

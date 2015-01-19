@@ -68,13 +68,13 @@ void bench_intersection(const t_idx& index,
         for (const auto& pos : result) {
             checksum += pos;
         }
-        ofs << name << ";"
-            << pattern.id << ";"
-            << pattern.m << ";"
-            << pattern.ndoc << ";"
-            << pattern.nocc << ";"
-            << pattern.bucket << ";"
-            << std::chrono::duration_cast<std::chrono::nanoseconds>(stop-start).count() << endl;
+        // ofs << name << ";"
+        //     << pattern.id << ";"
+        //     << pattern.m << ";"
+        //     << pattern.ndoc << ";"
+        //     << pattern.nocc << ";"
+        //     << pattern.bucket << ";"
+        //     << std::chrono::duration_cast<std::chrono::nanoseconds>(stop-start).count() << endl;
     }
     LOG(INFO) << "INDEX = " << name << " CHECKSUM = " << checksum;
 }
@@ -112,15 +112,15 @@ int main(int argc,const char* argv[])
         index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
         bench_intersection(index,patterns,"ABSPOS-UEF-128",resfs);
     }
-    {
-        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
-        index_nextword<uniform_eliasfano_list<128>,invidx_type> index(col);
-        bench_intersection(index,patterns,"NEXTWORD-UEF-128",resfs);
-    }
-    {
-        using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
-        index_abspos<eliasfano_list<true,false>,invidx_type> index(col);
-        bench_intersection(index,patterns,"ABSPOS-EF",resfs);
-    }
+    // {
+    //     using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+    //     index_nextword<uniform_eliasfano_list<128>,invidx_type> index(col);
+    //     bench_intersection(index,patterns,"NEXTWORD-UEF-128",resfs);
+    // }
+    // {
+    //     using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
+    //     index_abspos<eliasfano_list<true,false>,invidx_type> index(col);
+    //     bench_intersection(index,patterns,"ABSPOS-EF",resfs);
+    // }
     return 0;
 }

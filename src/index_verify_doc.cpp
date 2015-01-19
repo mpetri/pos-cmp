@@ -57,6 +57,7 @@ void verify_index(t_idx& index,const std::vector<pattern_t>& patterns,const char
     size_t fchecksum = 0;
     std::chrono::nanoseconds total(0);
     for (const auto& pattern : patterns) {
+        // LOG(INFO) << "("<<pattern.id<<")" << " res = " << pattern.ndoc;
         auto start = clock::now();
         auto result = index.phrase_list(pattern.tokens);
         auto stop = clock::now();
@@ -66,7 +67,8 @@ void verify_index(t_idx& index,const std::vector<pattern_t>& patterns,const char
             fchecksum += df.second;
         }
         if (result.size() != pattern.ndoc) {
-            LOG(ERROR) << "result does not mach ndoc";
+            LOG(ERROR) << "result does not mach ndoc. res = " << result.size() << " ndoc = " << pattern.ndoc;
+            return;
         }
     }
 
@@ -92,22 +94,27 @@ int main(int argc,const char* argv[])
     LOG(INFO) << "Parsed " << patterns.size() << " patterns from file " << args.pattern_file;
 
     /* verify index */
-    {
-        index_sort<> index(col);
-        verify_index(index,patterns,"SORT");
-    }
-    {
-        index_wt<> index(col);
-        verify_index(index,patterns,"WT");
-    }
-    {
-        index_sada<> index(col);
-        verify_index(index,patterns,"SADA");
-    }
+    // {
+    //     index_sort<> index(col);
+    //     verify_index(index,patterns,"SORT");
+    // }
+    // {
+    //     index_wt<> index(col);
+    //     verify_index(index,patterns,"WT");
+    // }
+    // {
+    //     index_sada<> index(col);
+    //     verify_index(index,patterns,"SADA");
+    // }
     {
         using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
         index_abspos<eliasfano_list<true>,invidx_type> index(col);
         verify_index(index,patterns,"ABS-EF");
+    }
+    {
+        using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
+        index_abspos<eliasfano_skip_list<64,true>,invidx_type> index(col);
+        verify_index(index,patterns,"ABS-ESF-64");
     }
     {
         using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;

@@ -13,6 +13,7 @@
 
 #include "list_basics.hpp"
 #include "eliasfano_list.hpp"
+#include "eliasfano_skip_list.hpp"
 #include "bitvector_list.hpp"
 
 enum class uef_blocktype
@@ -37,6 +38,7 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
 {
     public:
         using size_type = sdsl::int_vector<>::size_type;
+        using top_list_type = eliasfano_skip_list<64,true,false>;
     private:
         uint64_t m_size;
         uint64_t m_num_blocks;
@@ -49,8 +51,8 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
         size_type m_cur_offset = 0;
         mutable size_type m_cur_block_value_offset = 0;
         mutable size_type m_cur_block_universe;
-        mutable ef_iterator<true,false> m_top_itr;
-        mutable ef_iterator<true,false> m_top_end;
+        mutable typename top_list_type::iterator_type m_top_itr;
+        mutable typename top_list_type::iterator_type m_top_end;
         mutable size_type m_prev_top = 0;
         mutable uef_blocktype m_cur_block_type;
     private:
@@ -76,7 +78,7 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
 
             if (m_num_blocks == 1) {
                 auto top_offset = is.tellg();
-                auto top_list = eliasfano_list<true,false>::materialize(is,top_offset);
+                auto top_list = top_list_type::materialize(is,top_offset);
                 m_top_itr = top_list.begin();
                 m_top_end = top_list.end();
             } else {
@@ -86,7 +88,7 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
 
                 // prepare top lvl list
                 auto top_offset = is.tellg();
-                auto top_list = eliasfano_list<true,false>::materialize(is,top_offset);
+                auto top_list = top_list_type::materialize(is,top_offset);
                 m_top_itr = top_list.begin();
                 m_top_end = top_list.end();
 
@@ -126,7 +128,8 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
         }
         uint64_t operator*() const
         {
-            if (m_num_blocks == 1) return *(m_top_itr+m_cur_offset);
+            if (m_num_blocks == 1) return
+                    *(m_top_itr+m_cur_offset);
             if (m_last_accessed_offset != m_cur_offset) {
                 access_current_elem();
                 m_last_accessed_offset = m_cur_offset;
@@ -251,11 +254,13 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
             auto in_block_offset = m_cur_offset%t_block_size;
             switch (m_cur_block_type) {
                 case uef_blocktype::BV:
-                    if (in_block_offset != m_bv_block_itr.offset()) m_bv_block_itr += (in_block_offset - m_bv_block_itr.offset());
+                    if (in_block_offset != m_bv_block_itr.offset())
+                        m_bv_block_itr += (in_block_offset - m_bv_block_itr.offset());
                     m_cur_elem = m_cur_block_value_offset + *m_bv_block_itr;
                     break;
                 case uef_blocktype::EF:
-                    if (in_block_offset != m_ef_block_itr.offset()) m_ef_block_itr += (in_block_offset - m_ef_block_itr.offset());
+                    if (in_block_offset != m_ef_block_itr.offset())
+                        m_ef_block_itr += (in_block_offset - m_ef_block_itr.offset());
                     m_cur_elem = m_cur_block_value_offset + *m_ef_block_itr;
                     break;
                 case uef_blocktype::FULL:
@@ -271,6 +276,7 @@ struct uniform_eliasfano_list {
     using size_type = sdsl::int_vector<>::size_type;
     using iterator_type = uniform_ef_iterator<t_block_size>;
     using list_type = list_dummy<iterator_type>;
+    using top_list_type = eliasfano_skip_list<64,true,false>;
 
     static void
     compress_block(bit_ostream& os,const sdsl::int_vector<64>& data,size_t m,size_t n)
@@ -306,7 +312,7 @@ struct uniform_eliasfano_list {
         os.encode<coder::elias_gamma>(num_items);
 
         if (num_blocks == 1) {
-            eliasfano_list<true,false>::create(os,begin,end);
+            top_list_type::create(os,begin,end);
         } else {
             // (1) block start data
             os.expand_if_needed((num_blocks+1)*64);
@@ -325,7 +331,7 @@ struct uniform_eliasfano_list {
             if (has_leftover_block) {
                 top_lvl[j] = *(end-1);
             }
-            eliasfano_list<true,false>::create(os,top_lvl.begin(),top_lvl.end());
+            top_list_type::create(os,top_lvl.begin(),top_lvl.end());
 
             // (3) bottom level
             sdsl::int_vector<64> tmp_data(t_block_size);
