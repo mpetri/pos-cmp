@@ -233,9 +233,6 @@ class ef_skip_iterator : public std::iterator<std::random_access_iterator_tag,ui
                 m_cur_high_offset = sdsl::bits::next(m_data,m_high_offset+zero_pos) - m_high_offset;
                 if (m_cur_high_offset != zero_pos+1) {
                     // if the bucket we hit doesn't exactly match we don't have to search inside the bucket
-                    cur_bucket = m_cur_high_offset - m_cur_offset;
-                    m_cur_elem = (cur_bucket << m_width_low) | low(m_cur_offset);
-                    m_last_accessed_offset = m_cur_offset;
                     return false;
                 }
             }
@@ -268,9 +265,6 @@ class ef_skip_iterator : public std::iterator<std::random_access_iterator_tag,ui
                 m_cur_offset = m_size;
                 return false;
             }
-            cur_bucket = m_cur_high_offset - m_cur_offset;
-            m_cur_elem = (cur_bucket << m_width_low) | low(i);
-            m_last_accessed_offset = m_cur_offset;
             return false;
         }
     private:
