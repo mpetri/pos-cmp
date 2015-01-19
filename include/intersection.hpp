@@ -9,12 +9,23 @@ intersect(t_itr fbegin,t_itr fend,t_itr2 sbegin,t_itr2 send,int64_t offset = 0)
     auto n = std::distance(fbegin,fend);
     auto m = std::distance(sbegin,send);
     intersection_result res(std::min(n,m));
+
+    // std::vector<uint64_t> ss(m);
+    // auto tmp = sbegin;
+    // size_t k=0;
+    // while(tmp != send) {
+    //     ss[k++] = *tmp;
+    //     ++tmp;
+    // }
+
     size_t i=0;
     if (n < m) {
         size_t value_offset = (size_t) std::min(int64_t(0),offset);
+
         while (fbegin != fend) {
             int64_t cur = *fbegin;
             if (cur + offset >= 0 && sbegin.skip(cur+offset)) {
+                // std::cout << "1 FOUND " << cur+offset << "(" << cur+value_offset << ")" << std::endl;
                 res[i++] = cur+value_offset;
             }
             if (sbegin == send) break;
@@ -25,6 +36,7 @@ intersect(t_itr fbegin,t_itr fend,t_itr2 sbegin,t_itr2 send,int64_t offset = 0)
         while (sbegin != send) {
             int64_t cur = *sbegin;
             if (cur-offset >= 0 && fbegin.skip(cur-offset)) {
+                // std::cout << "1 FOUND " << cur-offset << "(" << cur-value_offset << ")" << std::endl;
                 res[i++] = cur-value_offset;
             }
             if (fbegin == fend) break;

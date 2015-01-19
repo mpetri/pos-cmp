@@ -113,19 +113,24 @@ int main(int argc,const char* argv[])
     }
     {
         using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
+        index_abspos<eliasfano_sskip_list<32,true>,invidx_type> index(col);
+        verify_index(index,patterns,"ABS-ESSF-64");
+    }
+    {
+        using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
         index_abspos<eliasfano_skip_list<64,true>,invidx_type> index(col);
         verify_index(index,patterns,"ABS-ESF-64");
     }
-    {
-        using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
-        index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
-        verify_index(index,patterns,"ABS-UEF-128");
-    }
-    {
-        using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
-        index_nextword<eliasfano_list<true>,invidx_type> index(col);
-        verify_index(index,patterns,"NEXT-EF");
-    }
+    // {
+    //     using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
+    //     index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
+    //     verify_index(index,patterns,"ABS-UEF-128");
+    // }
+    // {
+    //     using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
+    //     index_nextword<eliasfano_list<true>,invidx_type> index(col);
+    //     verify_index(index,patterns,"NEXT-EF");
+    // }
 
     return 0;
 }

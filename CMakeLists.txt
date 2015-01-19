@@ -62,7 +62,6 @@ include_directories("${PROJECT_SOURCE_DIR}/external/googletest/include"
                     )
 
 
-
 add_executable(unittest.x src/unittest.cpp)
 target_link_libraries(unittest.x gtest_main sdsl fastpfor_lib pthread)
 enable_testing()
@@ -88,6 +87,12 @@ target_link_libraries(index-bench.x sdsl fastpfor_lib pthread divsufsort divsufs
 
 add_executable(index-verify-doc.x src/index_verify_doc.cpp)
 target_link_libraries(index-verify-doc.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
+
+add_executable(convert_pattern_file.x src/convert_pattern_file.cpp)
+target_link_libraries(convert_pattern_file.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
+
+add_executable(index-bench-doc.x src/index_bench_doc.cpp)
+target_link_libraries(index-bench-doc.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
 
 ADD_SUBDIRECTORY(external/libzmq)

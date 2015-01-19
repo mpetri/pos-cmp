@@ -2198,6 +2198,47 @@ TEST(intersection, eliasfano_skip_list)
 }
 
 
+TEST(intersection, eliasfano_sskip_list)
+{
+    size_t n = 20;
+    std::mt19937 gen(4711);
+    std::uniform_int_distribution<uint64_t> dis(1, 1000000);
+    std::uniform_int_distribution<uint64_t> ldis(1, 10000);
+
+    for (size_t i=0; i<n; i++) {
+        size_t len = ldis(gen);
+        std::vector<uint32_t> A(len);
+        for (size_t j=0; j<len; j++) A[j] = dis(gen);
+        std::sort(A.begin(),A.end());
+        auto last = std::unique(A.begin(),A.end());
+
+        size_t len2 = ldis(gen);
+        std::vector<uint32_t> B(len2);
+        for (size_t j=0; j<len2; j++) B[j] = dis(gen);
+        std::sort(B.begin(),B.end());
+        auto lastB = std::unique(B.begin(),B.end());
+
+        sdsl::bit_vector bv;
+        size_t offsetA,offsetB;
+        {
+            bit_ostream os(bv);
+            offsetA = eliasfano_sskip_list<8,true>::create(os,A.begin(),last);
+            offsetB = eliasfano_sskip_list<8,true>::create(os,B.begin(),lastB);
+        }
+        {
+            bit_istream is(bv);
+            auto listA = eliasfano_sskip_list<8,true>::materialize(is,offsetA);
+            auto listB = eliasfano_sskip_list<8,true>::materialize(is,offsetB);
+            auto res = intersect(listA,listB);
+
+            std::vector<uint32_t> ires;
+            std::set_intersection(A.begin(),A.end(),B.begin(),B.end(),std::back_inserter(ires));
+
+            ASSERT_EQ(ires.size(),res.size());
+            for (size_t i=0; i<ires.size(); i++) ASSERT_EQ(ires[i],res[i]);
+        }
+    }
+}
 
 int main(int argc, char* argv[])
 {

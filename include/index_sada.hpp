@@ -12,7 +12,7 @@
 using std::vector;
 
 template<
-    class t_csa = sdsl::csa_wt_int<sdsl::wt_int<sdsl::hyb_vector<>>, 16, 1000000>,
+    class t_csa = sdsl::csa_sada_int<sdsl::enc_vector<>, 16, 1000000>,
     class t_range_min         = sdsl::rmq_succinct_sct<true>,
     class t_range_max         = sdsl::rmq_succinct_sct<false>,
     class t_doc_border        = sdsl::sd_vector<>,

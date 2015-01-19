@@ -68,13 +68,16 @@ void bench_intersection(const t_idx& index,
         for (const auto& pos : result) {
             checksum += pos;
         }
-        // ofs << name << ";"
-        //     << pattern.id << ";"
-        //     << pattern.m << ";"
-        //     << pattern.ndoc << ";"
-        //     << pattern.nocc << ";"
-        //     << pattern.bucket << ";"
-        //     << std::chrono::duration_cast<std::chrono::nanoseconds>(stop-start).count() << endl;
+
+        ofs << name << ";"
+            << pattern.id << ";"
+            << pattern.m << ";"
+            << pattern.ndoc << ";"
+            << pattern.nocc << ";"
+            << pattern.list_size_sum << ";"
+            << pattern.min_list_size << ";"
+            << pattern.bucket << ";"
+            << std::chrono::duration_cast<std::chrono::nanoseconds>(stop-start).count() << endl;
     }
     LOG(INFO) << "INDEX = " << name << " CHECKSUM = " << checksum;
 }
@@ -94,7 +97,7 @@ int main(int argc,const char* argv[])
     collection col(args.collection_dir);
 
     /* load pattern file */
-    auto patterns = pattern_parser::parse_file(args.pattern_file);
+    auto patterns = pattern_parser::parse_file<false>(args.pattern_file);
     LOG(INFO) << "Parsed " << patterns.size() << " patterns from file " << args.pattern_file;
 
 
@@ -104,7 +107,7 @@ int main(int argc,const char* argv[])
     auto time_str = std::to_string(sec_since_epoc.count());
     ofstream resfs(col.path+"/results/bench_pos-"+time_str+".csv");
 
-    resfs << "type;id;len;ndoc;nocc;bucket;time_ns" << std::endl;
+    resfs << "type;id;len;ndoc;nocc;list_sum;min_list_len;bucket;time_ns" << std::endl;
 
     /* load indexes and test */
     {

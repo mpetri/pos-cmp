@@ -146,11 +146,13 @@ class index_abspos
             auto itr = list.begin();
             auto end = list.end();
             auto prev_docid = m_dpm.map_to_id(*itr);
+            //std::cout << "pos = " << *itr << " docid = " << doc_id << std::endl;
             ++itr;
             size_t freq = 1;
             while (itr != end) {
                 auto pos = *itr;
                 auto doc_id = m_dpm.map_to_id(pos);
+                //std::cout << "pos = " << pos << " docid = " << doc_id << std::endl;
                 if (doc_id != prev_docid) {
                     res.emplace_back(prev_docid,freq);
                     freq = 1;
