@@ -109,7 +109,7 @@ int main(int argc,const char* argv[])
     collection col(args.collection_dir);
 
     /* load pattern file */
-    auto patterns = pattern_parser::parse_file(args.pattern_file);
+    auto patterns = pattern_parser::parse_file<false>(args.pattern_file);
     LOG(INFO) << "Parsed " << patterns.size() << " patterns from file " << args.pattern_file;
 
     /* load indexes and test */

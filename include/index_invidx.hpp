@@ -77,8 +77,8 @@ class index_invidx
                 // (3) postings lists
                 {
                     LOG(INFO) << "CONSTRUCT inverted index";
-                    sdsl::int_vector_mapper<> D(col.file_map[KEY_D]);
-                    sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
+                    const sdsl::int_vector_mapper<0,std::ios_base::in> D(col.file_map[KEY_D]);
+                    const sdsl::int_vector_mapper<0,std::ios_base::in> C(col.file_map[KEY_C]);
                     bit_ostream bvi(m_id_data);
                     bit_ostream bvf(m_freq_data);
                     m_num_lists = C.size();

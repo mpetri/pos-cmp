@@ -45,14 +45,16 @@ class index_nextword
                 sdsl::int_vector_mapper<> CC(col.file_map[KEY_CC]);
                 {
                     bit_ostream bvo(m_data);
-                    sdsl::int_vector_mapper<> text(col.file_map[KEY_TEXT]);
-                    sdsl::int_vector_mapper<> SA(col.file_map[KEY_SA]);
-                    sdsl::int_vector_mapper<> SCC(col.file_map[KEY_SCC]);
-                    sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
+                    {
+                        const sdsl::int_vector_mapper<0,std::ios_base::in> text(col.file_map[KEY_TEXT]);
+                        m_sym_width = text.width();
+                    }
+                    const sdsl::int_vector_mapper<0,std::ios_base::in> SA(col.file_map[KEY_SA]);
+                    const sdsl::int_vector_mapper<0,std::ios_base::in> SCC(col.file_map[KEY_SCC]);
+                    const sdsl::int_vector_mapper<0,std::ios_base::in> C(col.file_map[KEY_C]);
                     m_num_lists = CC.size();
                     meta_data.resize(m_num_lists);
                     size_t csum = 1; // skip 0
-                    m_sym_width = text.width();
                     for (size_t i=0; i<CC.size(); i++) {
                         size_t n = SCC[i];
                         auto begin = SA.begin()+csum;

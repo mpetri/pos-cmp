@@ -42,8 +42,8 @@ class index_abspos
                     // (2) pos index
                     LOG(INFO) << "CONSTRUCT abspos index";
                     bit_ostream bvo(m_data);
-                    sdsl::int_vector_mapper<> POS(col.file_map[KEY_POSPL]);
-                    sdsl::int_vector_mapper<> C(col.file_map[KEY_C]);
+                    const sdsl::int_vector_mapper<0,std::ios_base::in> POS(col.file_map[KEY_POSPL]);
+                    const sdsl::int_vector_mapper<0,std::ios_base::in> C(col.file_map[KEY_C]);
                     m_num_lists = C.size();
                     m_meta_data.resize(m_num_lists);
                     size_t csum = C[0] + C[1];

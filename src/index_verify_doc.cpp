@@ -90,7 +90,7 @@ int main(int argc,const char* argv[])
     LOG(INFO) << "Parsing collection directory " << args.collection_dir;
     collection col(args.collection_dir);
 
-    auto patterns = pattern_parser::parse_file(args.pattern_file);
+    auto patterns = pattern_parser::parse_file<false>(args.pattern_file);
     LOG(INFO) << "Parsed " << patterns.size() << " patterns from file " << args.pattern_file;
 
     /* verify index */
