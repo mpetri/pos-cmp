@@ -104,4 +104,25 @@ class index_wt
                 return res;
             }
         }
+
+        intersection_result
+        doc_intersection(std::vector<uint64_t> ids) const
+        {
+            intersection_result res(1);
+            std::vector<std::pair<size_type,size_type>> ranges;
+            for (const auto& id: ids) {
+                size_type sp=1, ep=0;
+                std::vector<uint64_t> tmpids(1);
+                tmpids[0] = id;
+                if (0 == sdsl::backward_search(m_csa_full, 0, m_csa_full.size()-1,tmpids.begin(),tmpids.end(), sp, ep)) {
+                    return res;
+                } else {
+                    ranges.emplace_back(sp,ep);
+                }
+            }
+            auto result = sdsl::intersect(m_wtd,ranges);
+            res.resize(result.size());
+            for (size_t i=0; i<result.size(); i++) res[i] = result[i].first;
+            return res;
+        }
 };

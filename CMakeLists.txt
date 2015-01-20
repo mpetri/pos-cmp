@@ -94,6 +94,8 @@ target_link_libraries(convert_pattern_file.x sdsl fastpfor_lib pthread divsufsor
 add_executable(index-bench-doc.x src/index_bench_doc.cpp)
 target_link_libraries(index-bench-doc.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
+add_executable(index-bench-doclvl.x src/index_bench_doclvl.cpp)
+target_link_libraries(index-bench-doclvl.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
 ADD_SUBDIRECTORY(external/libzmq)
 SET_PROPERTY(DIRECTORY external/libzmq PROPERTY ZMQ_BUILD_TESTS FALSE)

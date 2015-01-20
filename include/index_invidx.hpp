@@ -3,6 +3,7 @@
 #include "list_types.hpp"
 #include "rank_functions.hpp"
 #include "range_iterators.hpp"
+#include "intersection.hpp"
 
 #include "easylogging++.h"
 
@@ -164,5 +165,14 @@ class index_invidx
             return make_pair(id_list_type::materialize(m_isi,m_meta_data[i].id_offset),
                              freq_list_type::materialize(m_isf,m_meta_data[i].freq_offset)
                             );
+        }
+        intersection_result
+        intersection(std::vector<uint64_t> ids) const
+        {
+            std::vector<typename id_list_type::list_type> lists;
+            for (const auto& id : ids) {
+                lists.emplace_back(id_list_type::materialize(m_isi,m_meta_data[id].id_offset));
+            }
+            return intersect(lists);
         }
 };

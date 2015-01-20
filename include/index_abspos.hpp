@@ -138,6 +138,15 @@ class index_abspos
             }
             return pos_intersect(lists);
         }
+        intersection_result
+        doc_intersection(std::vector<uint64_t> ids) const
+        {
+            std::vector<typename doclist_type::list_type> lists;
+            for (const auto& id : ids) {
+                lists.emplace_back(doc_list(id));
+            }
+            return m_docidx.intersection(ids);
+        }
         template<class t_list>
         docfreq_result
         map_to_doc_ids(const t_list& list) const
