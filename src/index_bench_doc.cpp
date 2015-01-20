@@ -71,6 +71,8 @@ void bench_doc_intersection(const t_idx& index,
     size_t fchecksum = 0;
     std::chrono::nanoseconds total(0);
     for (const auto& pattern : patterns) {
+        LOG(INFO) << "id=" << pattern.id << " m=" << pattern.m << " ndoc=" << pattern.ndoc << " nocc=" << pattern.nocc
+                  << " list_sum=" << pattern.list_size_sum << " min_list=" << pattern.min_list_size;
         auto start = clock::now();
         auto result = index.phrase_list(pattern.tokens);
         auto stop = clock::now();
@@ -128,7 +130,7 @@ int main(int argc,const char* argv[])
             freq = 0;
             cnt = 0;
         }
-        if (freq >= args.patterns_per_bucket) {
+        if (freq >= args.patterns_per_bucket || bucket > 6) {
             itr = patterns.erase(itr);
         } else {
             itr++;

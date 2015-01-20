@@ -36,13 +36,13 @@ struct pattern_t {
         } else {
             id = std::stoull(elems[0]);
             bucket = std::stoull(elems[1]);
-            ndoc = std::stoull(elems[2]);
-            m = std::stoull(elems[3]);
-            sp = std::stoull(elems[4]);
-            ep = std::stoull(elems[5]);
+            m = std::stoull(elems[2]);
+            sp = std::stoull(elems[3]);
+            ep = std::stoull(elems[4]);
+            ndoc = std::stoull(elems[5]);
             nocc = std::stoull(elems[6]);
-            min_list_size = std::stoull(elems[7]);
-            list_size_sum = std::stoull(elems[8]);
+            list_size_sum = std::stoull(elems[7]);
+            min_list_size = std::stoull(elems[8]);
             std::istringstream pinput(elems[9]);
             std::string pitem;
             while (std::getline(pinput, pitem, ',')) {
