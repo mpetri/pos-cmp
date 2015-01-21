@@ -71,7 +71,7 @@ void bench_doc_intersection(const t_idx& index,
     std::chrono::nanoseconds total(0);
     for (const auto& pattern : patterns) {
         auto start = clock::now();
-        auto result = index.doc_intersection(pattern.tokens);
+        auto result = index.intersection(pattern.tokens);
         auto stop = clock::now();
         for (const auto& id : result) {
             dchecksum += id;
@@ -150,22 +150,22 @@ int main(int argc,const char* argv[])
     /* load indexes and test */
     {
         using invidx_type = index_invidx<uniform_eliasfano_list<128>,optpfor_list<128,false>>;
-        index_abspos<uniform_eliasfano_list<128>,invidx_type> index(col);
+        invidx_type index(col);
         bench_doc_intersection(index,patterns,"UEF-128",resfs);
     }
     {
         using invidx_type = index_invidx<eliasfano_skip_list<64,true>,optpfor_list<128,false>>;
-        index_abspos<eliasfano_sskip_list<64,true>,invidx_type> index(col);
+        invidx_type index(col);
         bench_doc_intersection(index,patterns,"ESL-64",resfs);
     }
     {
         using invidx_type = index_invidx<eliasfano_list<true>,optpfor_list<128,false>>;
-        index_abspos<eliasfano_list<true,false>,invidx_type> index(col);
+        invidx_type index(col);
         bench_doc_intersection(index,patterns,"EL",resfs);
     }
     {
         using invidx_type = index_invidx<optpfor_list<128,true>,optpfor_list<128,false>>;
-        index_abspos<eliasfano_list<true,false>,invidx_type> index(col);
+        invidx_type index(col);
         bench_doc_intersection(index,patterns,"OPF-128",resfs);
     }
     {
