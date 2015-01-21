@@ -38,7 +38,7 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
 {
     public:
         using size_type = sdsl::int_vector<>::size_type;
-        using top_list_type = eliasfano_skip_list<64,true,false>;
+        using top_list_type = eliasfano_list<true,false>;
     private:
         uint64_t m_size;
         uint64_t m_num_blocks;
@@ -174,9 +174,15 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
         }
         bool skip(uint64_t pos)
         {
+            // std::cout << "pos = " << pos << " m_cur_offset = " << m_cur_offset << std::endl;
+            // if(pos == 43402) std::cout << "skip to pos = " << 43402 << std::endl;
             if (m_num_blocks == 1) return m_top_itr.skip(pos);
             auto cur_block = m_cur_offset/t_block_size;
+            // if(pos == 43402) std::cout << "m_cur_offset = " << m_cur_offset << std::endl;
+            // if(pos == 43402) std::cout << "cur_block = " << cur_block << std::endl;
+            // if(pos == 43402) std::cout << "m_top_itr = " << *m_top_itr << std::endl;
             if (pos > *m_top_itr) {
+                // if(pos == 43402) std::cout << "skip to correct block" << std::endl;
                 // skip to correct block
                 m_top_itr.skip(pos);
                 if (m_top_itr == m_top_end) {
@@ -184,11 +190,18 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
                     return false;
                 }
                 auto new_block = m_top_itr.offset();
+                // if(pos == 43402) std::cout << "new_block = " << new_block << std::endl;
                 if (new_block != cur_block) { // we are in a new block!
+                    // if(pos == 43402) std::cout << "we are in a new block" << std::endl;
                     auto prev = m_top_itr; --prev;
                     m_prev_top = *prev;
                     m_cur_block_value_offset = m_prev_top + 1;
                     m_cur_block_universe = *m_top_itr - m_prev_top - 1;
+                    // if(pos == 43402) {
+                    //     std::cout << "m_prev_top = " << m_prev_top << std::endl;
+                    //     std::cout << "m_top_itr = " << *m_top_itr << std::endl;
+                    //     std::cout << "m_cur_block_universe = " << m_cur_block_universe << std::endl;
+                    // }
                     auto block_start_offset = new_block*t_block_size;
                     auto items_in_block = (m_size - block_start_offset) < t_block_size ? m_size - block_start_offset : t_block_size;
                     m_cur_block_type = determine_block_type(items_in_block,m_cur_block_universe);
@@ -204,9 +217,13 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
                     }
                 }
             }
+            // if(pos == 49) std::cout << "look inside block" << std::endl;
             // look inside block. invariant pos <= TOP[block]
             auto rel_pos = pos - m_cur_block_value_offset;
+            // if(pos == 49) std::cout << "m_cur_block_value_offset = " << m_cur_block_value_offset << std::endl;
+            // if(pos == 49) std::cout << "rel_pos =" << rel_pos << std::endl;
             if (m_cur_block_type == uef_blocktype::BV) {
+                // if(pos == 49) std::cout << "block is bitvector" << std::endl;
                 bool found = m_bv_block_itr.skip(rel_pos);
                 m_cur_offset = m_top_itr.offset()*t_block_size + m_bv_block_itr.offset();
                 m_cur_elem = m_cur_block_value_offset + *m_bv_block_itr;
@@ -214,13 +231,15 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
                 return found;
             }
             if (m_cur_block_type == uef_blocktype::EF) {
+                // if(pos == 49) std::cout << "block is ef" << std::endl;
                 bool found = m_ef_block_itr.skip(rel_pos);
                 m_cur_offset = m_top_itr.offset()*t_block_size + m_ef_block_itr.offset();
                 m_cur_elem = m_cur_block_value_offset + *m_ef_block_itr;
                 m_last_accessed_offset = m_cur_offset;
                 return found;
             }
-            m_cur_offset += rel_pos; // must be found in a full block
+            // if(pos == 49) std::cout << "block is full" << std::endl;
+            m_cur_offset = cur_block*t_block_size + rel_pos; // must be found in a full block
             m_cur_elem = m_cur_block_value_offset + rel_pos;
             m_last_accessed_offset = m_cur_offset;
             return true;
@@ -276,7 +295,7 @@ struct uniform_eliasfano_list {
     using size_type = sdsl::int_vector<>::size_type;
     using iterator_type = uniform_ef_iterator<t_block_size>;
     using list_type = list_dummy<iterator_type>;
-    using top_list_type = eliasfano_skip_list<64,true,false>;
+    using top_list_type = eliasfano_list<true,false>;
 
     static void
     compress_block(bit_ostream& os,const sdsl::int_vector<64>& data,size_t m,size_t n)

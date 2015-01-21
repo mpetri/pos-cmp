@@ -64,7 +64,7 @@ struct pattern_parser {
                 patterns.emplace_back(pattern_t(line,i++,t_old_format));
             }
         } else {
-            throw std::runtime_error("pattern_parser: cannot open pattern file.");
+            throw std::runtime_error("pattern_parser: cannot open pattern file '"+pfile+"'.");
         }
         return patterns;
     }

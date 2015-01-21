@@ -97,6 +97,10 @@ target_link_libraries(index-bench-doc.x sdsl fastpfor_lib pthread divsufsort div
 add_executable(index-bench-doclvl.x src/index_bench_doclvl.cpp)
 target_link_libraries(index-bench-doclvl.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
 
+add_executable(compare-invidx.x src/compare_invidx.cpp)
+target_link_libraries(compare-invidx.x sdsl fastpfor_lib pthread divsufsort divsufsort64)
+
+
 ADD_SUBDIRECTORY(external/libzmq)
 SET_PROPERTY(DIRECTORY external/libzmq PROPERTY ZMQ_BUILD_TESTS FALSE)
 
