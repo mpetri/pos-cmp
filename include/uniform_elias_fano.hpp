@@ -38,7 +38,7 @@ class uniform_ef_iterator : public std::iterator<std::random_access_iterator_tag
 {
     public:
         using size_type = sdsl::int_vector<>::size_type;
-        using top_list_type = eliasfano_list<true,false>;
+        using top_list_type = eliasfano_skip_list<64,true,false>;
     private:
         uint64_t m_size;
         uint64_t m_num_blocks;
@@ -295,7 +295,7 @@ struct uniform_eliasfano_list {
     using size_type = sdsl::int_vector<>::size_type;
     using iterator_type = uniform_ef_iterator<t_block_size>;
     using list_type = list_dummy<iterator_type>;
-    using top_list_type = eliasfano_list<true,false>;
+    using top_list_type = eliasfano_skip_list<64,true,false>;
 
     static void
     compress_block(bit_ostream& os,const sdsl::int_vector<64>& data,size_t m,size_t n)
