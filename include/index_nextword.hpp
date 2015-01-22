@@ -42,7 +42,7 @@ class index_nextword
                 // (2) pos index
                 LOG(INFO) << "CONSTRUCT abs nextword index";
                 std::vector<uint64_t> meta_data;
-                sdsl::int_vector_mapper<0,std::ios_base::in> CC(col.file_map[KEY_CC]);
+                const sdsl::int_vector_mapper<0,std::ios_base::in> CC(col.file_map[KEY_CC]);
                 {
                     bit_ostream bvo(m_data);
                     {
