@@ -55,23 +55,6 @@ class index_sada
             } else { // construct
                 LOG(INFO) << "CONSTRUCT sada index";
 
-                LOG(INFO) << "CONSTRUCT CSA";
-                sdsl::cache_config cfg;
-                cfg.delete_files = false;
-                cfg.dir = col.path + "/tmp/";
-                cfg.id = "TMP";
-                cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
-                cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTPERM];
-                construct(m_csa_full,col.file_map[KEY_TEXTPERM],cfg,0);
-
-                LOG(INFO) << "CONSTRUCT DOC BORDER RANK";
-                sdsl::bit_vector dbv;
-                sdsl::load_from_file(dbv,col.file_map[KEY_DBV]);
-                m_doc_border = doc_border_type(dbv);
-                m_doc_border_rank   = doc_border_rank_type(&m_doc_border);
-                m_doc_border_select = doc_border_select_type(&m_doc_border);
-                m_doc_cnt = m_doc_border_rank(m_doc_border.size());
-
                 LOG(INFO) << "CONSTRUCT DOC ISA";
                 {
                     m_doc_isa.resize(m_doc_cnt);
@@ -101,32 +84,54 @@ class index_sada
                 }
 
                 {
-                    sdsl::int_vector_mapper<> D(col.file_map[KEY_D]);
+                    const sdsl::int_vector_mapper<0,std::ios_base::in> D(col.file_map[KEY_D]);
                     {
                         LOG(INFO) << "CONSTRUCT CPrev";
                         sdsl::int_vector<> Cprev(D.size(), 0, sdsl::bits::hi(D.size())+1);
-                        sdsl::int_vector<> last_occ(m_doc_cnt+1, 0, sdsl::bits::hi(D.size())+1);
-                        for (size_type i = 0; i < D.size(); ++i) {
-                            size_type doc = D[i];
-                            Cprev[i]      = last_occ[doc];
-                            last_occ[doc] = i;
+                        {
+                            sdsl::int_vector<> last_occ(m_doc_cnt+1, 0, sdsl::bits::hi(D.size())+1);
+                            for (size_type i = 0; i < D.size(); ++i) {
+                                size_type doc = D[i];
+                                Cprev[i]      = last_occ[doc];
+                                last_occ[doc] = i;
+                            }
                         }
                         m_rminq = range_min_type(&Cprev);
                     }
                     {
                         LOG(INFO) << "CONSTRUCT CNext";
                         sdsl::int_vector<> Cnext(D.size(), 0, sdsl::bits::hi(D.size())+1);
-                        sdsl::int_vector<> last_occ(m_doc_cnt+1, D.size(), sdsl::bits::hi(D.size())+1);
-                        for (size_type i = 0, j = D.size()-1; i < D.size(); ++i, --j) {
-                            size_type doc = D[j];
-                            Cnext[j]      = last_occ[doc];
-                            last_occ[doc] = j;
+                        {
+                            sdsl::int_vector<> last_occ(m_doc_cnt+1, D.size(), sdsl::bits::hi(D.size())+1);
+                            for (size_type i = 0, j = D.size()-1; i < D.size(); ++i, --j) {
+                                size_type doc = D[j];
+                                Cnext[j]      = last_occ[doc];
+                                last_occ[doc] = j;
+                            }
                         }
                         m_rmaxq = range_max_type(&Cnext);
                     }
                 }
                 m_doc_rmin_marked = sdsl::bit_vector(m_doc_cnt, 0);
                 m_doc_rmax_marked = sdsl::bit_vector(m_doc_cnt, 0);
+
+
+                LOG(INFO) << "CONSTRUCT CSA";
+                sdsl::cache_config cfg;
+                cfg.delete_files = false;
+                cfg.dir = col.path + "/tmp/";
+                cfg.id = "TMP";
+                cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
+                cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTPERM];
+                construct(m_csa_full,col.file_map[KEY_TEXTPERM],cfg,0);
+
+                LOG(INFO) << "CONSTRUCT DOC BORDER RANK";
+                sdsl::bit_vector dbv;
+                sdsl::load_from_file(dbv,col.file_map[KEY_DBV]);
+                m_doc_border = doc_border_type(dbv);
+                m_doc_border_rank   = doc_border_rank_type(&m_doc_border);
+                m_doc_border_select = doc_border_select_type(&m_doc_border);
+                m_doc_cnt = m_doc_border_rank(m_doc_border.size());
 
                 LOG(INFO) << "STORE to file '" << file_name << "'";
                 std::ofstream ofs(file_name);

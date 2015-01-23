@@ -233,8 +233,10 @@ struct optpfor_list {
         // one block special case
         if (size <= t_block_size) {
             if (t_sorted) {
+                os.expand_if_needed(t_block_size*64);
                 os.encode<coder::delta<coder::vbyte>>(begin,end);
             } else {
+                os.expand_if_needed(t_block_size*64);
                 auto tmp = begin;
                 while (tmp != end) {
                     os.encode<coder::vbyte>(*tmp - min);

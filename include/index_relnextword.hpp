@@ -9,15 +9,15 @@
 
 #include <sdsl/dac_vector.hpp>
 
-template<class t_pospl=optpfor_list<128,true>,class t_invidx = index_invidx<> >
-class index_nextword
+template<class t_pospl=optpfor_list<128,false>,class t_invidx = index_invidx<> >
+class index_relnextword
 {
     public:
         using size_type = sdsl::int_vector<>::size_type;
         using plist_type = t_pospl;
         using doclist_type = typename t_invidx::id_list_type;
         using invidx_type = t_invidx;
-        const std::string name = "NEXTWORD";
+        const std::string name = "RELNEXTWORD";
         std::string file_name;
     public:
         invidx_type m_docidx;
@@ -31,7 +31,7 @@ class index_nextword
         uint64_t m_sym_width;
         bit_istream m_is;
     public:
-        index_nextword(collection& col) : m_docidx(col), m_is(m_data)
+        index_relnextword(collection& col) : m_docidx(col), m_is(m_data)
         {
             file_name = col.path +"index/"+name+"-"+sdsl::util::class_to_hash(*this)+".idx";
             if (utils::file_exists(file_name)) {  // load
@@ -43,8 +43,11 @@ class index_nextword
                 std::ifstream ifs(file_name);
                 load(ifs);
             } else { // construct
+                LOG(INFO) << "CONSTRUCT rel nextword index";
+                // (1) create doc pos mapper
+                m_dpm = doc_pos_mapper(col);
+
                 // (2) pos index
-                LOG(INFO) << "CONSTRUCT abs nextword index";
                 std::vector<uint64_t> meta_data;
                 const sdsl::int_vector_mapper<0,std::ios_base::in> CC(col.file_map[KEY_CC]);
                 {
@@ -56,6 +59,8 @@ class index_nextword
                     const sdsl::int_vector_mapper<0,std::ios_base::in> SA(col.file_map[KEY_SA]);
                     const sdsl::int_vector_mapper<0,std::ios_base::in> SCC(col.file_map[KEY_SCC]);
                     const sdsl::int_vector_mapper<0,std::ios_base::in> C(col.file_map[KEY_C]);
+                    sdsl::bit_vector DBV;
+                    sdsl::load_from_file(DBV,col.file_map[KEY_DBV]);
                     m_num_lists = CC.size();
                     meta_data.resize(m_num_lists);
                     size_t csum = 1; // skip 0
@@ -63,10 +68,40 @@ class index_nextword
                         size_t n = SCC[i];
                         auto begin = SA.begin()+csum;
                         auto end = begin + n;
-                        LOG_EVERY_N(250000, INFO) << "Construct nextword list " << i << " (" << n << ")";
+                        LOG_EVERY_N(250000, INFO) << "Construct rel nextword list " << i << " (" << n << ")";
                         std::vector<uint64_t> tmp(begin,end);
                         std::sort(tmp.begin(),tmp.end());
-                        meta_data[i] = plist_type::create(bvo,tmp.begin(),tmp.end());
+
+                        // map to begin of doc
+                        std::vector<uint64_t> rel_pos(n);
+                        std::copy(tmp.begin(),tmp.end(),rel_pos.begin());
+                        auto prev = 0ULL;
+
+                        auto first_one = 0ULL;
+                        if (DBV[0]==1) first_one = 0ULL;
+                        else first_one = sdsl::bits::next(DBV.data(),0ULL);
+                        auto prev_doc_id = SA.size()+1;
+                        for (size_t j=0; j<rel_pos.size(); j++) {
+                            auto p = rel_pos[j];
+                            auto cur_doc_id = m_dpm.map_to_id(p);
+                            auto rpos = 0ULL;
+                            if (cur_doc_id != prev_doc_id) {
+                                // delta to the start of the doc
+                                if (p > first_one) {
+                                    auto one_pos = sdsl::bits::prev(DBV.data(),p);
+                                    rpos = p - (one_pos+1ULL);
+                                } else {
+                                    rpos = p;
+                                }
+                            } else {
+                                // delta to the prev item
+                                rpos = p - prev;
+                            }
+                            rel_pos[j] = rpos;
+                            prev = p;
+                            prev_doc_id = cur_doc_id;
+                        }
+                        meta_data[i] = plist_type::create(bvo,rel_pos.begin(),rel_pos.end());
                         csum += n;
                     }
                 }
@@ -79,9 +114,6 @@ class index_nextword
                 m_mapper = sdsl::sd_vector<>(CC.begin(),CC.end());
                 m_mapper_access.set_vector(&m_mapper);
 
-                // (4) create doc pos mapper
-                m_dpm = doc_pos_mapper(col);
-
                 // (5) write
                 LOG(INFO) << "STORE to file '" << file_name << "'";
                 std::ofstream ofs(file_name);
@@ -89,7 +121,7 @@ class index_nextword
                 LOG(INFO) << "STORE space usage '" << file_name << ".html'";
                 std::ofstream vofs(file_name+".html");
                 sdsl::write_structure<sdsl::HTML_FORMAT>(vofs,*this,m_docidx);
-                LOG(INFO) << "abspos nextword index size : " << bytes / (1024*1024) << " MB";
+                LOG(INFO) << "relpos nextword index size : " << bytes / (1024*1024) << " MB";
             }
         }
         size_type serialize(std::ostream& out, sdsl::structure_tree_node* v=NULL, std::string name="") const

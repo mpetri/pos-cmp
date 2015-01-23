@@ -110,4 +110,34 @@ class index_sort
                 return res;
             }
         }
+
+        intersection_result
+        intersection(std::vector<uint64_t> ids) const
+        {
+            docfreq_result res;
+            size_type sp=1, ep=0;
+            if (0 == sdsl::backward_search(m_csa_full, 0, m_csa_full.size()-1,ids.begin(),ids.end(), sp, ep)) {
+                return res;
+            } else {
+                size_t n = ep-sp+1;
+                std::vector<uint64_t> tmp(n);
+                for (size_t i=0; i<n; i++) tmp[i] = m_d[sp+i];
+                std::sort(tmp.begin(),tmp.end());
+
+                auto prev_id = tmp[0];
+                auto freq = 1;
+                for (size_t i=1; i<tmp.size(); i++) {
+                    auto cur_id = tmp[i];
+                    if (cur_id != prev_id) {
+                        res.emplace_back(prev_id,freq);
+                        prev_id = cur_id;
+                        freq = 1;
+                    } else {
+                        freq++;
+                    }
+                }
+                res.emplace_back(prev_id,freq);
+                return res;
+            }
+        }
 };
