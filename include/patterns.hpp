@@ -11,6 +11,7 @@ struct pattern_t {
     size_t min_list_size;
     size_t list_size_sum;
     std::vector<uint64_t> tokens;
+    pattern_t() = default;
     pattern_t(const std::string& pline,size_t _id,bool old_format = false) : id(_id)
     {
         std::istringstream input(pline);
